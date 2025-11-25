@@ -13,7 +13,7 @@ export default function LoginPage() {
           <div className="flex justify-center mb-6">
             <img src="/images/apolo-20logo.png" alt="APOLO Logo" className="h-16 w-auto" />
           </div>
-          <p className="text-sm text-muted-foreground">Plataforma de Gestión Política</p>
+          <p className="text-sm text-muted-foreground">Plataforma de Gestión </p>
         </div>
         <LoginForm />
       </div>
