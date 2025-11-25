@@ -14,8 +14,10 @@ RUN pnpm install
 FROM node:20-slim AS builder
 WORKDIR /app
 
-# Copy pnpm and dependencies
-COPY --from=deps /usr/local/bin/pnpm /usr/local/bin/
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
