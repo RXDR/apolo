@@ -36,8 +36,8 @@ export function Sidebar() {
       >
         <div className="p-4 sm:p-6 border-b border-sidebar-border">
           <div className="flex items-center justify-center lg:justify-start gap-3">
-            <img src="/images/apolo-logo-white.png" alt="APOLO Logo" className="h-12 sm:h-14 w-auto" />
-            <span className="hidden sm:inline text-white font-bold text-lg">APOLO</span>
+            <img src="/images/apolo-logo-white.png" alt="APOLO Logo" className="h-12 sm:h-30 w-auto" />
+
           </div>
         </div>
 
