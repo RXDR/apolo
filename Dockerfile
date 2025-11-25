@@ -7,7 +7,7 @@ RUN npm install -g pnpm
 
 # Copy package manager files and install dependencies
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 
 # Stage 2: Build the application
