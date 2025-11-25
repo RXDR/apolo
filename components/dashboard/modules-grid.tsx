@@ -7,7 +7,7 @@ import { Activity, Users, BarChart3, Calendar, FileText, Building2, ArrowRight }
 const MODULES = [
   {
     title: "Actividades",
-    description: "Registra y gestiona actividades de campaña y visitas de terreno",
+    description: "Registra y gestiona actividades  y visitas de terreno",
     href: "/dashboard/activities",
     icon: Activity,
     color: "bg-blue-100 dark:bg-blue-900",
@@ -15,7 +15,7 @@ const MODULES = [
   },
   {
     title: "Módulo Personas",
-    description: "Administra fichas técnicas y perfiles de personas y votantes",
+    description: "Administra fichas técnicas y perfiles de personas ",
     href: "/dashboard/personas",
     icon: Users,
     color: "bg-green-100 dark:bg-green-900",
