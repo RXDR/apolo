@@ -35,7 +35,6 @@ import { UseFormReturn } from "react-hook-form"
 import { useCatalogos } from "@/lib/hooks/use-catalogos"
 import { usePersonas } from "@/lib/hooks/use-personas"
 import { useState, useEffect } from "react"
-import { useDebounce } from "@/lib/hooks/use-debounce" // Assuming this exists or I'll create a simple debounce
 
 interface ReferenciasSectionProps {
     form: UseFormReturn<any>
@@ -155,7 +154,7 @@ export function ReferenciasSection({ form }: ReferenciasSectionProps) {
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Tipo de Referencia</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccione tipo" />

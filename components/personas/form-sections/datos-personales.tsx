@@ -58,7 +58,7 @@ export function DatosPersonalesSection({ form }: DatosPersonalesSectionProps) {
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Tipo de Documento *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccione tipo" />
@@ -98,7 +98,12 @@ export function DatosPersonalesSection({ form }: DatosPersonalesSectionProps) {
                     <FormItem>
                         <FormLabel>Fecha de Nacimiento</FormLabel>
                         <FormControl>
-                            <Input type="date" {...field} />
+                            <Input 
+                                type="date" 
+                                value={field.value || ""} 
+                                onChange={field.onChange}
+                                onBlur={field.onBlur}
+                            />
                         </FormControl>
                         <FormMessage />
                     </FormItem>
@@ -111,7 +116,7 @@ export function DatosPersonalesSection({ form }: DatosPersonalesSectionProps) {
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Género</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccione género" />
@@ -134,7 +139,7 @@ export function DatosPersonalesSection({ form }: DatosPersonalesSectionProps) {
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Estado Civil</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccione estado" />

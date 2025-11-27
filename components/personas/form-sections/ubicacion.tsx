@@ -76,7 +76,7 @@ export function UbicacionSection({ form }: UbicacionSectionProps) {
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Ciudad</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccione ciudad" />
@@ -165,7 +165,7 @@ export function UbicacionSection({ form }: UbicacionSectionProps) {
                                             form.setValue("localidad_nombre", selected.nombre)
                                         }
                                     }}
-                                    defaultValue={field.value}
+                                    value={field.value || ""}
                                     disabled={!ciudadId}
                                 >
                                     <FormControl>
@@ -201,7 +201,7 @@ export function UbicacionSection({ form }: UbicacionSectionProps) {
                                             form.setValue("barrio_nombre", selected.nombre)
                                         }
                                     }}
-                                    defaultValue={field.value}
+                                    value={field.value || ""}
                                     disabled={!localidadId}
                                 >
                                     <FormControl>
@@ -230,7 +230,7 @@ export function UbicacionSection({ form }: UbicacionSectionProps) {
                 render={({ field }) => (
                     <FormItem>
                         <FormLabel>Zona</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccione zona" />

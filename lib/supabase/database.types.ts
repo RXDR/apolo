@@ -406,9 +406,11 @@ export interface Database {
                     beneficiario: string | null
                     zona_id: string | null
                     zona_nombre: string | null
-                    compromiso_marketing: boolean
-                    compromiso_impacto: boolean
-                    compromiso_cautivo: boolean
+                    compromiso_marketing: number
+                    compromiso_impacto: number
+                    compromiso_cautivo: number
+                    compromiso_privado: string | null
+                    observaciones: string | null
                     latitud: number | null
                     longitud: number | null
                     auth_user_id: string | null
@@ -458,9 +460,11 @@ export interface Database {
                     beneficiario?: string | null
                     zona_id?: string | null
                     zona_nombre?: string | null
-                    compromiso_marketing?: boolean
-                    compromiso_impacto?: boolean
-                    compromiso_cautivo?: boolean
+                    compromiso_marketing?: number
+                    compromiso_impacto?: number
+                    compromiso_cautivo?: number
+                    compromiso_privado?: string | null
+                    observaciones?: string | null
                     latitud?: number | null
                     longitud?: number | null
                     auth_user_id?: string | null
@@ -510,9 +514,11 @@ export interface Database {
                     beneficiario?: string | null
                     zona_id?: string | null
                     zona_nombre?: string | null
-                    compromiso_marketing?: boolean
-                    compromiso_impacto?: boolean
-                    compromiso_cautivo?: boolean
+                    compromiso_marketing?: number
+                    compromiso_impacto?: number
+                    compromiso_cautivo?: number
+                    compromiso_privado?: string | null
+                    observaciones?: string | null
                     latitud?: number | null
                     longitud?: number | null
                     auth_user_id?: string | null

@@ -7,7 +7,7 @@ import * as z from "zod"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Form } from "@/components/ui/form"
-import { Loader2, Save } from "lucide-react"
+import { Loader2, Save, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { usePersonas } from "@/lib/hooks/use-personas"
@@ -48,9 +48,9 @@ const personaSchema = z.object({
   whatsapp: z.string().optional(),
 
   // Datos Demográficos
-  nivel_educativo_id: z.string().optional(),
-  ocupacion: z.string().optional(),
-  tipo_vivienda_id: z.string().optional(),
+  nivel_escolaridad: z.string().optional(),
+  perfil_ocupacion: z.string().optional(),
+  tipo_vivienda: z.string().optional(),
   estrato: z.string().optional(),
   ingresos_rango: z.string().optional(),
   tiene_hijos: z.boolean().default(false),
@@ -83,12 +83,23 @@ interface PersonaFormProps {
   isEditing?: boolean
 }
 
+const SECTIONS = [
+  { id: "datos-personales", label: "Datos Personales" },
+  { id: "ubicacion", label: "Ubicación" },
+  { id: "contacto", label: "Contacto" },
+  { id: "demograficos", label: "Datos Demográficos" },
+  { id: "redes", label: "Redes Sociales" },
+  { id: "referencias", label: "Referencias" },
+  { id: "compromisos", label: "Compromisos" },
+]
+
 export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps) {
   const router = useRouter()
-  const { crearPersona, actualizarPersona } = usePersonas()
+  const { crear, actualizar } = usePersonas()
   const { usuario: usuarioActual } = useUsuario()
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [activeTab, setActiveTab] = useState("datos-personales")
+  const [activeTabIndex, setActiveTabIndex] = useState(0)
+  const activeTab = SECTIONS[activeTabIndex].id
 
   const form = useForm<PersonaFormValues>({
     resolver: zodResolver(personaSchema),
@@ -103,6 +114,18 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
     },
   })
 
+  const handleNext = () => {
+    if (activeTabIndex < SECTIONS.length - 1) {
+      setActiveTabIndex(activeTabIndex + 1)
+    }
+  }
+
+  const handlePrevious = () => {
+    if (activeTabIndex > 0) {
+      setActiveTabIndex(activeTabIndex - 1)
+    }
+  }
+
   async function onSubmit(data: PersonaFormValues) {
     try {
       setIsSubmitting(true)
@@ -110,17 +133,15 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
       // Preparar datos para enviar
       const personaData = {
         ...data,
-        // Asegurar que campos numéricos sean null si están vacíos
-        numero_hijos: data.numero_hijos || null,
         // Campos de auditoría
         actualizado_por: usuarioActual?.id,
       }
 
       if (isEditing && initialData?.id) {
-        await actualizarPersona(initialData.id, personaData)
+        await actualizar(initialData.id, personaData)
         toast.success("Persona actualizada correctamente")
       } else {
-        await crearPersona({
+        await crear({
           ...personaData,
           creado_por: usuarioActual?.id,
           estado: "activo",
@@ -168,20 +189,12 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
             <Card>
               <CardContent className="p-2">
                 <nav className="flex flex-col space-y-1">
-                  {[
-                    { id: "datos-personales", label: "Datos Personales" },
-                    { id: "ubicacion", label: "Ubicación" },
-                    { id: "contacto", label: "Contacto" },
-                    { id: "demograficos", label: "Datos Demográficos" },
-                    { id: "redes", label: "Redes Sociales" },
-                    { id: "referencias", label: "Referencias" },
-                    { id: "compromisos", label: "Compromisos" },
-                  ].map((item) => (
+                  {SECTIONS.map((item, index) => (
                     <Button
                       key={item.id}
                       variant={activeTab === item.id ? "secondary" : "ghost"}
                       className="justify-start w-full"
-                      onClick={() => setActiveTab(item.id)}
+                      onClick={() => setActiveTabIndex(index)}
                       type="button"
                     >
                       {item.label}
@@ -230,6 +243,33 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
                 <div className={activeTab === "compromisos" ? "block" : "hidden"}>
                   <h3 className="text-lg font-medium mb-4">Compromisos y Observaciones</h3>
                   <CompromisosSection form={form} />
+                </div>
+
+                {/* Botones de navegación */}
+                <div className="flex justify-between items-center mt-8 pt-6 border-t">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handlePrevious}
+                    disabled={activeTabIndex === 0}
+                  >
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    Anterior
+                  </Button>
+
+                  <div className="text-sm text-muted-foreground">
+                    {activeTabIndex + 1} de {SECTIONS.length}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleNext}
+                    disabled={activeTabIndex === SECTIONS.length - 1}
+                  >
+                    Siguiente
+                    <ChevronRight className="ml-2 h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
