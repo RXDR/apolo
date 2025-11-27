@@ -206,9 +206,11 @@ CREATE TABLE IF NOT EXISTS public.usuarios (
     zona_nombre VARCHAR(100),
     
     -- Compromisos
-    compromiso_marketing BOOLEAN DEFAULT false,
-    compromiso_impacto BOOLEAN DEFAULT false,
-    compromiso_cautivo BOOLEAN DEFAULT false,
+    compromiso_marketing INTEGER DEFAULT 0,
+    compromiso_impacto INTEGER DEFAULT 0,
+    compromiso_cautivo INTEGER DEFAULT 0,
+    compromiso_privado VARCHAR(100),
+    observaciones TEXT,
     
     -- Geolocalización
     latitud DECIMAL(10, 8),

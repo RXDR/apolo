@@ -1,47 +1,61 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { useAuth } from "@/lib/contexts/auth-context"
+import { supabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
 
-const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-})
-
-type LoginFormData = z.infer<typeof loginSchema>
-
 export function LoginForm() {
-  const { signIn } = useAuth()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-  })
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-  const onSubmit = async (data: LoginFormData) => {
+    console.log('🔐 Iniciando login...')
+    setIsLoading(true)
+    setError("")
+
     try {
-      setIsLoading(true)
-      setError("")
-      await signIn(data.email, data.password)
-    } catch (err) {
-      console.error("Error en login:", err)
-      setError("Email o contraseña incorrectos")
-    } finally {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password,
+      })
+
+      console.log('📊 Respuesta de Supabase:', { data, error: authError })
+
+      if (authError) {
+        console.error('❌ Error de autenticación:', authError)
+        throw authError
+      }
+
+      if (data?.session) {
+        console.log('✅ Login exitoso! Sesión:', data.session)
+        console.log('🍪 Cookies antes de redirigir:', document.cookie)
+
+        // Verificar si la cookie de supabase existe
+        const hasSupabaseCookie = document.cookie.includes('sb-')
+        console.log('🍪 Tiene cookie de Supabase:', hasSupabaseCookie)
+
+        console.log('🔄 Redirigiendo a /dashboard...')
+
+        // Dar más tiempo para que la cookie se asiente
+        setTimeout(() => {
+          window.location.href = '/dashboard'
+        }, 500)
+      } else {
+        console.warn('⚠️ No se obtuvo sesión')
+        setError('No se pudo iniciar sesión')
+        setIsLoading(false)
+      }
+    } catch (err: any) {
+      console.error('💥 Error en login:', err)
+      setError(err.message || "Error al iniciar sesión")
       setIsLoading(false)
     }
   }
@@ -49,11 +63,11 @@ export function LoginForm() {
   return (
     <Card className="border-0 shadow-lg bg-white">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-primary">Bienvenido a APOLO</CardTitle>
+        <CardTitle className="text-2xl text-primary">Bienvenido a APOLO (LOGIN V2)</CardTitle>
         <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               Correo Electrónico
@@ -62,11 +76,12 @@ export function LoginForm() {
               id="email"
               type="email"
               placeholder="tu@email.com"
-              {...register("email")}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
               className="h-10 border-border"
+              required
             />
-            {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -77,14 +92,19 @@ export function LoginForm() {
               id="password"
               type="password"
               placeholder="••••••••"
-              {...register("password")}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               disabled={isLoading}
               className="h-10 border-border"
+              required
             />
-            {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
           </div>
 
-          {error && <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md">{error}</div>}
+          {error && (
+            <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md">
+              {error}
+            </div>
+          )}
 
           <Button
             type="submit"
@@ -92,7 +112,7 @@ export function LoginForm() {
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isLoading ? "Cargando..." : "Iniciar Sesión"}
+            {isLoading ? "Iniciando sesión..." : "Iniciar Sesión"}
           </Button>
 
           <div className="text-center">

@@ -72,6 +72,15 @@ export function useCatalogos() {
         return barrios.filter((b) => b.localidad_id === localidadId)
     }
 
+    // Stub para puestos de votación (pendiente de crear tabla)
+    const [puestosVotacion, setPuestosVotacion] = useState<any[]>([])
+
+    function fetchPuestosVotacion(ciudadId: string) {
+        // TODO: Implementar cuando exista la tabla
+        console.log('Fetching puestos votación for', ciudadId)
+        setPuestosVotacion([])
+    }
+
     return {
         ciudades,
         localidades,
@@ -80,9 +89,13 @@ export function useCatalogos() {
         tiposReferencia,
         nivelesEscolaridad,
         tiposVivienda,
+        puestosVotacion, // Added to fix crash
         loading,
         getLocalidadesPorCiudad,
         getBarriosPorLocalidad,
+        fetchLocalidades: (id: string) => getLocalidadesPorCiudad(id), // Helper for consistency
+        fetchBarrios: (id: string) => getBarriosPorLocalidad(id), // Helper for consistency
+        fetchPuestosVotacion, // Added to fix crash
         recargar: cargarCatalogos,
     }
 }

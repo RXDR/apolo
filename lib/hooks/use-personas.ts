@@ -189,6 +189,30 @@ export function usePersonas() {
         }
     }
 
+    async function buscarReferentes(termino: string) {
+        try {
+            setLoading(true)
+            setError(null)
+
+            if (!termino || termino.length < 3) return []
+
+            const { data, error: queryError } = await supabase
+                .from('usuarios')
+                .select('id, nombres, apellidos, numero_documento')
+                .or(`nombres.ilike.%${termino}%,apellidos.ilike.%${termino}%,numero_documento.ilike.%${termino}%`)
+                .limit(10)
+
+            if (queryError) throw queryError
+
+            return data || []
+        } catch (err) {
+            console.error('Error buscando referentes:', err)
+            return []
+        } finally {
+            setLoading(false)
+        }
+    }
+
     return {
         listar,
         obtenerPorId,
@@ -196,6 +220,7 @@ export function usePersonas() {
         actualizar,
         eliminar,
         cambiarEstado,
+        buscarReferentes, // Added
         loading,
         error,
     }

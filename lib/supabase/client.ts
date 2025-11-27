@@ -1,48 +1,50 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
 
-// Validar variables de entorno
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// Instancia singleton del cliente de Supabase
+let supabaseInstance: SupabaseClient<Database> | null = null
 
-if (!supabaseUrl) {
-    throw new Error(
-        'NEXT_PUBLIC_SUPABASE_URL no está definida. Verifica tu archivo .env.local'
-    )
-}
-
-if (!supabaseAnonKey) {
-    throw new Error(
-        'NEXT_PUBLIC_SUPABASE_ANON_KEY no está definida. Verifica tu archivo .env.local'
-    )
-}
-
-// Cliente de Supabase para el navegador
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-    },
-})
-
-// Cliente admin (solo para uso en servidor)
-// IMPORTANTE: Solo usar en API routes o Server Components
-export function getSupabaseAdmin() {
-    if (!supabaseUrl) {
-        throw new Error('NEXT_PUBLIC_SUPABASE_URL no está definida')
+export function createClient(): SupabaseClient<Database> {
+    // Si ya existe una instancia, retornarla (patrón singleton)
+    if (supabaseInstance) {
+        return supabaseInstance
     }
 
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!serviceRoleKey) {
-        console.warn('SUPABASE_SERVICE_ROLE_KEY no está definida')
-        return null
+    if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error(
+            'Missing Supabase environment variables. Please check your .env.local file.'
+        )
     }
 
-    return createClient<Database>(supabaseUrl, serviceRoleKey, {
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false,
-        },
-    })
+    // Crear la instancia una sola vez
+    supabaseInstance = createBrowserClient<Database>(
+        supabaseUrl,
+        supabaseAnonKey,
+        {
+            auth: {
+                // CRÍTICO: Desactivar revalidación automática para evitar recargas
+                autoRefreshToken: true,
+                persistSession: true,
+                detectSessionInUrl: true,
+                flowType: 'pkce',
+                // Esta es la clave para evitar recargas al cambiar de pestaña
+                storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+            },
+            global: {
+                headers: {
+                    'x-application-name': 'datanalisis-app',
+                },
+            },
+        }
+    )
+
+    return supabaseInstance
 }
+
+// Exportar la instancia singleton
+export const supabase = createClient()
+export default supabase
