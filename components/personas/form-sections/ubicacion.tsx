@@ -125,9 +125,9 @@ export function UbicacionSection({ form }: UbicacionSectionProps) {
                         name="localidad_nombre"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Nombre Localidad / Comuna</FormLabel>
+                                <FormLabel>Nombre Localidad </FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Ej: Usaquén" {...field} />
+                                    <Input placeholder="Ej: soledad" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
