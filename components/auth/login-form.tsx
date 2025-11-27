@@ -3,35 +3,44 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import * as z from "zod"
+import { useAuth } from "@/lib/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Loader2 } from "lucide-react"
 import Link from "next/link"
 
+const loginSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+})
+
+type LoginFormData = z.infer<typeof loginSchema>
+
 export function LoginForm() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
+  const { signIn } = useAuth()
   const [error, setError] = useState("")
-  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError("")
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  })
 
-    if (!email || !password) {
-      setError("Por favor completa todos los campos")
-      setIsLoading(false)
-      return
-    }
-
+  const onSubmit = async (data: LoginFormData) => {
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      router.push("/dashboard")
+      setIsLoading(true)
+      setError("")
+      await signIn(data.email, data.password)
     } catch (err) {
-      setError("Error al iniciar sesión. Intenta de nuevo.")
+      console.error("Error en login:", err)
+      setError("Email o contraseña incorrectos")
     } finally {
       setIsLoading(false)
     }
@@ -44,7 +53,7 @@ export function LoginForm() {
         <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium text-foreground">
               Correo Electrónico
@@ -53,11 +62,11 @@ export function LoginForm() {
               id="email"
               type="email"
               placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register("email")}
               disabled={isLoading}
               className="h-10 border-border"
             />
+            {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -68,11 +77,11 @@ export function LoginForm() {
               id="password"
               type="password"
               placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register("password")}
               disabled={isLoading}
               className="h-10 border-border"
             />
+            {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
           </div>
 
           {error && <div className="p-3 bg-destructive/10 text-destructive text-sm rounded-md">{error}</div>}
@@ -82,6 +91,7 @@ export function LoginForm() {
             className="w-full h-10 bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={isLoading}
           >
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isLoading ? "Cargando..." : "Iniciar Sesión"}
           </Button>
 

@@ -1,146 +1,292 @@
 "use client"
 
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Edit, Trash2 } from "lucide-react"
-import { useState } from "react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Search, Edit, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { usePersonas } from "@/lib/hooks/use-personas"
+import { useCatalogos } from "@/lib/hooks/use-catalogos"
+import { usePermisos } from "@/lib/hooks/use-permisos"
+import { toast } from "sonner"
+import type { Database } from "@/lib/supabase/database.types"
 
-interface Persona {
-  id: string
-  name: string
-  phone: string
-  email: string
-  zone: string
-  status: "activo" | "inactivo" | "neutral"
-  commitment: "alto" | "medio" | "bajo"
-}
-
-const MOCK_PERSONAS: Persona[] = [
-  {
-    id: "1",
-    name: "Juan García López",
-    phone: "311-555-0001",
-    email: "juan@email.com",
-    zone: "Centro",
-    status: "activo",
-    commitment: "alto",
-  },
-  {
-    id: "2",
-    name: "María Rodríguez Martínez",
-    phone: "311-555-0002",
-    email: "maria@email.com",
-    zone: "Norte",
-    status: "activo",
-    commitment: "medio",
-  },
-  {
-    id: "3",
-    name: "Carlos Pérez González",
-    phone: "311-555-0003",
-    email: "carlos@email.com",
-    zone: "Sur",
-    status: "inactivo",
-    commitment: "bajo",
-  },
-  {
-    id: "4",
-    name: "Ana Martínez Silva",
-    phone: "311-555-0004",
-    email: "ana@email.com",
-    zone: "Oriente",
-    status: "activo",
-    commitment: "alto",
-  },
-]
+type Usuario = Database["public"]["Tables"]["usuarios"]["Row"]
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
     activo: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
     inactivo: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300",
-    neutral: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
+    suspendido: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
   }
-  return colors[status] || colors.neutral
-}
-
-const getCommitmentColor = (commitment: string) => {
-  const colors: Record<string, string> = {
-    alto: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-    medio: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300",
-    bajo: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300",
-  }
-  return colors[commitment] || colors.medio
+  return colors[status] || colors.inactivo
 }
 
 export function PersonasTable() {
+  const router = useRouter()
+  const { listar, eliminar, loading: personasLoading } = usePersonas()
+  const { ciudades, zonas, loading: catalogosLoading } = useCatalogos()
+  const { permisos } = usePermisos("Módulo Personas")
+
+  const [personas, setPersonas] = useState<Usuario[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+
+  // Filtros
   const [search, setSearch] = useState("")
+  const [estadoFilter, setEstadoFilter] = useState<string>("todos")
+  const [ciudadFilter, setCiudadFilter] = useState<string>("todos")
+  const [zonaFilter, setZonaFilter] = useState<string>("todos")
+
+  const pageSize = 10
+
+  useEffect(() => {
+    cargarPersonas()
+  }, [currentPage, search, estadoFilter, ciudadFilter, zonaFilter])
+
+  async function cargarPersonas() {
+    try {
+      const filtros: any = {}
+
+      if (search) filtros.busqueda = search
+      if (estadoFilter !== "todos") filtros.estado = estadoFilter
+      if (ciudadFilter !== "todos") filtros.ciudad_id = ciudadFilter
+      if (zonaFilter !== "todos") filtros.zona_id = zonaFilter
+
+      const result = await listar(filtros, currentPage, pageSize)
+
+      setPersonas(result.data)
+      setTotalCount(result.count)
+      setTotalPages(result.totalPages)
+    } catch (error) {
+      console.error("Error cargando personas:", error)
+      toast.error("Error al cargar personas")
+    }
+  }
+
+  async function handleEliminar(id: string, nombre: string) {
+    if (!confirm(`¿Estás seguro de eliminar a ${nombre}?`)) return
+
+    try {
+      await eliminar(id)
+      toast.success("Persona eliminada exitosamente")
+      cargarPersonas()
+    } catch (error) {
+      console.error("Error eliminando persona:", error)
+      toast.error("Error al eliminar persona")
+    }
+  }
+
+  const loading = personasLoading || catalogosLoading
+
+  if (!permisos?.leer) {
+    return (
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-8 text-center">
+          <p className="text-muted-foreground">No tienes permisos para ver este módulo</p>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre, teléfono o email..."
-          className="pl-10"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      {/* Filtros */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="relative md:col-span-2">
+          <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, documento o email..."
+            className="pl-10"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setCurrentPage(1)
+            }}
+          />
+        </div>
+
+        <Select
+          value={estadoFilter}
+          onValueChange={(value) => {
+            setEstadoFilter(value)
+            setCurrentPage(1)
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos los estados</SelectItem>
+            <SelectItem value="activo">Activo</SelectItem>
+            <SelectItem value="inactivo">Inactivo</SelectItem>
+            <SelectItem value="suspendido">Suspendido</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={ciudadFilter}
+          onValueChange={(value) => {
+            setCiudadFilter(value)
+            setCurrentPage(1)
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Ciudad" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todas las ciudades</SelectItem>
+            {ciudades.map((ciudad) => (
+              <SelectItem key={ciudad.id} value={ciudad.id}>
+                {ciudad.nombre}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
+      {/* Tabla */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Nombre</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Contacto</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Zona</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Estado</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Compromiso</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_PERSONAS.map((persona) => (
-                  <tr key={persona.id} className="border-b border-border hover:bg-muted/50 transition-colors">
-                    <td className="px-6 py-4 text-sm text-foreground">{persona.name}</td>
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      <div>{persona.phone}</div>
-                      <div className="text-xs">{persona.email}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-foreground">{persona.zone}</td>
-                    <td className="px-6 py-4">
-                      <Badge className={getStatusColor(persona.status)}>{persona.status}</Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge className={getCommitmentColor(persona.commitment)}>{persona.commitment}</Badge>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="w-8 h-8 text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center p-12">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          ) : personas.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground">
+              No se encontraron personas
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/50">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                        Documento
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                        Nombre
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                        Contacto
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                        Ciudad
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                        Zona
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                        Estado
+                      </th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-foreground">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {personas.map((persona) => (
+                      <tr
+                        key={persona.id}
+                        className="border-b border-border hover:bg-muted/50 transition-colors"
+                      >
+                        <td className="px-6 py-4 text-sm text-foreground">
+                          <div>{persona.tipo_documento}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {persona.numero_documento}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-foreground">
+                          {persona.nombres} {persona.apellidos}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                          <div>{persona.celular || "-"}</div>
+                          <div className="text-xs">{persona.email || "-"}</div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-foreground">
+                          {persona.ciudad_nombre || "-"}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-foreground">
+                          {persona.zona_nombre || "-"}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge className={getStatusColor(persona.estado)}>{persona.estado}</Badge>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            {permisos?.actualizar && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-8 h-8 text-muted-foreground hover:text-foreground"
+                                onClick={() => router.push(`/dashboard/personas/${persona.id}`)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {permisos?.eliminar && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-8 h-8 text-destructive hover:bg-destructive/10"
+                                onClick={() =>
+                                  handleEliminar(
+                                    persona.id,
+                                    `${persona.nombres} ${persona.apellidos}`
+                                  )
+                                }
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Paginación */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+                <div className="text-sm text-muted-foreground">
+                  Mostrando {(currentPage - 1) * pageSize + 1} a{" "}
+                  {Math.min(currentPage * pageSize, totalCount)} de {totalCount} personas
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Siguiente
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
