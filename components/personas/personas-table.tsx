@@ -13,12 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Edit, Trash2, Loader2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Shield } from "lucide-react"
 import { usePersonas } from "@/lib/hooks/use-personas"
 import { useCatalogos } from "@/lib/hooks/use-catalogos"
 import { usePermisos } from "@/lib/hooks/use-permisos"
 import { toast } from "sonner"
 import type { Database } from "@/lib/supabase/database.types"
+import { PermisosModal } from "./permisos-modal"
 
 type Usuario = Database["public"]["Tables"]["usuarios"]["Row"]
 
@@ -47,6 +48,10 @@ export function PersonasTable() {
   const [estadoFilter, setEstadoFilter] = useState<string>("todos")
   const [ciudadFilter, setCiudadFilter] = useState<string>("todos")
   const [zonaFilter, setZonaFilter] = useState<string>("todos")
+
+  // Estado para modal de permisos
+  const [permisosModalOpen, setPermisosModalOpen] = useState(false)
+  const [personaSeleccionada, setPersonaSeleccionada] = useState<Usuario | null>(null)
 
   const pageSize = 10
 
@@ -85,6 +90,11 @@ export function PersonasTable() {
       console.error("Error eliminando persona:", error)
       toast.error("Error al eliminar persona")
     }
+  }
+
+  function handleAbrirPermisos(persona: Usuario) {
+    setPersonaSeleccionada(persona)
+    setPermisosModalOpen(true)
   }
 
   const loading = personasLoading || catalogosLoading
@@ -235,6 +245,17 @@ export function PersonasTable() {
                                 <Edit className="w-4 h-4" />
                               </Button>
                             )}
+                            {permisos?.administrar && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-8 h-8 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900"
+                                onClick={() => handleAbrirPermisos(persona)}
+                                title="Gestionar permisos"
+                              >
+                                <Shield className="w-4 h-4" />
+                              </Button>
+                            )}
                             {permisos?.eliminar && (
                               <Button
                                 variant="ghost"
@@ -289,6 +310,19 @@ export function PersonasTable() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de permisos */}
+      {personaSeleccionada && (
+        <PermisosModal
+          open={permisosModalOpen}
+          onOpenChange={setPermisosModalOpen}
+          persona={{
+            id: personaSeleccionada.id,
+            nombres: personaSeleccionada.nombres,
+            apellidos: personaSeleccionada.apellidos,
+          }}
+        />
+      )}
     </div>
   )
 }

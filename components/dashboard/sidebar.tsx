@@ -1,14 +1,13 @@
-"use client"
-
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Activity, Users, BarChart3, Calendar, Settings, FileText, Building2, Menu } from "lucide-react"
+import { Activity, Users, BarChart3, Calendar, Settings, FileText, Building2, Menu, UserCheck } from "lucide-react"
 import { useState } from "react"
 
 const MENU_ITEMS = [
   { label: "Actividades", href: "/dashboard/activities", icon: Activity },
   { label: "Módulo Personas", href: "/dashboard/personas", icon: Users },
+  { label: "Módulo Coordinador", href: "/dashboard/coordinador", icon: UserCheck },
   { label: "Gestión Gerencial", href: "/dashboard/management", icon: BarChart3 },
   { label: "Alistamiento Debate", href: "/dashboard/debate", icon: FileText },
   { label: "Asignar Datos", href: "/dashboard/assign-data", icon: Building2 },

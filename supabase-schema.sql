@@ -291,6 +291,53 @@ CREATE INDEX IF NOT EXISTS idx_usuarios_auth_user ON public.usuarios(auth_user_i
 COMMENT ON TABLE public.usuarios IS 'Tabla principal de usuarios/personas del sistema CRM político';
 COMMENT ON COLUMN public.usuarios.auth_user_id IS 'Referencia al usuario de autenticación de Supabase';
 
+-- =====================================================
+-- Tabla: coordinadores
+-- =====================================================
+CREATE TABLE IF NOT EXISTS public.coordinadores (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Relación con persona
+    usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    
+    -- Credenciales de acceso
+    email VARCHAR(255) NOT NULL UNIQUE,
+    
+    -- Relación con usuario de autenticación creado
+    auth_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    
+    -- Referencia (coordinador que lo refiere)
+    referencia_coordinador_id UUID REFERENCES public.coordinadores(id) ON DELETE SET NULL,
+    
+    -- Rol asignado
+    perfil_id UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
+    
+    -- Estado
+    estado VARCHAR(20) DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo', 'suspendido')),
+    
+    -- Auditoría
+    creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    creado_por UUID REFERENCES public.usuarios(id),
+    actualizado_por UUID REFERENCES public.usuarios(id),
+    
+    -- Constraints
+    CONSTRAINT coordinadores_email_check CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
+);
+
+-- Índices para coordinadores
+CREATE INDEX IF NOT EXISTS idx_coordinadores_usuario ON public.coordinadores(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_coordinadores_email ON public.coordinadores(email);
+CREATE INDEX IF NOT EXISTS idx_coordinadores_auth_user ON public.coordinadores(auth_user_id);
+CREATE INDEX IF NOT EXISTS idx_coordinadores_referencia ON public.coordinadores(referencia_coordinador_id);
+CREATE INDEX IF NOT EXISTS idx_coordinadores_perfil ON public.coordinadores(perfil_id);
+CREATE INDEX IF NOT EXISTS idx_coordinadores_estado ON public.coordinadores(estado);
+
+COMMENT ON TABLE public.coordinadores IS 'Tabla de coordinadores políticos con credenciales de acceso al sistema';
+COMMENT ON COLUMN public.coordinadores.usuario_id IS 'Referencia a la persona en la tabla usuarios';
+COMMENT ON COLUMN public.coordinadores.auth_user_id IS 'Usuario de autenticación en Supabase Auth';
+COMMENT ON COLUMN public.coordinadores.referencia_coordinador_id IS 'Coordinador que refiere a este coordinador';
+
 -- Tabla: perfiles
 CREATE TABLE IF NOT EXISTS public.perfiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -480,6 +527,11 @@ CREATE TRIGGER trigger_actualizar_zonas
     FOR EACH ROW
     EXECUTE FUNCTION public.actualizar_timestamp();
 
+CREATE TRIGGER trigger_actualizar_coordinadores
+    BEFORE UPDATE ON public.coordinadores
+    FOR EACH ROW
+    EXECUTE FUNCTION public.actualizar_timestamp();
+
 -- Función para verificar permisos de usuario
 CREATE OR REPLACE FUNCTION public.tiene_permiso(
     p_usuario_id UUID,
@@ -555,6 +607,7 @@ ALTER TABLE public.zonas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tipos_referencia ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.niveles_escolaridad ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tipos_vivienda ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.coordinadores ENABLE ROW LEVEL SECURITY;
 
 -- Políticas para usuarios
 CREATE POLICY "Usuarios pueden ver su propia información"
@@ -606,6 +659,59 @@ CREATE POLICY "Usuarios con permiso pueden actualizar usuarios"
             WHERE u.auth_user_id = auth.uid()
             AND m.nombre = 'Módulo Personas'
             AND p.codigo = 'UPDATE'
+            AND up.activo = true
+        )
+    );
+
+-- Políticas para coordinadores
+CREATE POLICY "Usuarios autenticados pueden leer coordinadores"
+    ON public.coordinadores FOR SELECT
+    USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Usuarios con permiso pueden crear coordinadores"
+    ON public.coordinadores FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.usuarios u
+            JOIN public.usuario_perfil up ON u.id = up.usuario_id
+            JOIN public.perfil_permiso_modulo ppm ON up.perfil_id = ppm.perfil_id
+            JOIN public.modulos m ON ppm.modulo_id = m.id
+            JOIN public.permisos p ON ppm.permiso_id = p.id
+            WHERE u.auth_user_id = auth.uid()
+            AND m.nombre = 'Módulo Coordinador'
+            AND p.codigo = 'CREATE'
+            AND up.activo = true
+        )
+    );
+
+CREATE POLICY "Usuarios con permiso pueden actualizar coordinadores"
+    ON public.coordinadores FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.usuarios u
+            JOIN public.usuario_perfil up ON u.id = up.usuario_id
+            JOIN public.perfil_permiso_modulo ppm ON up.perfil_id = ppm.perfil_id
+            JOIN public.modulos m ON ppm.modulo_id = m.id
+            JOIN public.permisos p ON ppm.permiso_id = p.id
+            WHERE u.auth_user_id = auth.uid()
+            AND m.nombre = 'Módulo Coordinador'
+            AND p.codigo = 'UPDATE'
+            AND up.activo = true
+        )
+    );
+
+CREATE POLICY "Usuarios con permiso pueden eliminar coordinadores"
+    ON public.coordinadores FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.usuarios u
+            JOIN public.usuario_perfil up ON u.id = up.usuario_id
+            JOIN public.perfil_permiso_modulo ppm ON up.perfil_id = ppm.perfil_id
+            JOIN public.modulos m ON ppm.modulo_id = m.id
+            JOIN public.permisos p ON ppm.permiso_id = p.id
+            WHERE u.auth_user_id = auth.uid()
+            AND m.nombre = 'Módulo Coordinador'
+            AND p.codigo = 'DELETE'
             AND up.activo = true
         )
     );
@@ -688,7 +794,8 @@ INSERT INTO public.modulos (nombre, descripcion, orden, obligatorio, ruta, icono
 ('Crear/Asignar Datos', 'Creación y asignación de datos', 5, true, '/dashboard/asignar-datos', 'database'),
 ('Agenda y Eventos', 'Calendario y gestión de reuniones', 6, false, '/dashboard/agenda', 'calendar-check'),
 ('Gestión de Terreno', 'Visitas y geolocalización', 7, false, '/dashboard/terreno', 'map-pin'),
-('Administración', 'Gestión de usuarios y configuración', 8, false, '/dashboard/admin', 'settings')
+('Administración', 'Gestión de usuarios y configuración', 8, false, '/dashboard/admin', 'settings'),
+('Módulo Coordinador', 'Gestión de coordinadores políticos con credenciales de acceso', 9, false, '/dashboard/coordinador', 'user-check')
 ON CONFLICT (nombre) DO NOTHING;
 
 -- Insertar permisos CRUD básicos
@@ -796,6 +903,36 @@ GROUP BY u.id, u.numero_documento, u.tipo_documento, u.nombres, u.apellidos,
          u.email, u.celular, u.estado, c.nombre, z.nombre, u.creado_en;
 
 COMMENT ON VIEW public.v_usuarios_perfiles IS 'Vista de usuarios con sus perfiles asignados';
+
+-- Vista: coordinadores con información completa
+CREATE OR REPLACE VIEW public.v_coordinadores_completo AS
+SELECT 
+    c.id as coordinador_id,
+    c.email,
+    c.estado,
+    u.id as usuario_id,
+    u.nombres,
+    u.apellidos,
+    u.numero_documento,
+    u.tipo_documento,
+    u.celular,
+    ciudad.nombre as ciudad_nombre,
+    zona.nombre as zona_nombre,
+    p.nombre as rol,
+    p.id as perfil_id,
+    ref_coord.id as referencia_id,
+    ref_usuario.nombres || ' ' || ref_usuario.apellidos as referencia_nombre,
+    c.creado_en,
+    c.actualizado_en
+FROM public.coordinadores c
+INNER JOIN public.usuarios u ON c.usuario_id = u.id
+LEFT JOIN public.perfiles p ON c.perfil_id = p.id
+LEFT JOIN public.ciudades ciudad ON u.ciudad_id = ciudad.id
+LEFT JOIN public.zonas zona ON u.zona_id = zona.id
+LEFT JOIN public.coordinadores ref_coord ON c.referencia_coordinador_id = ref_coord.id
+LEFT JOIN public.usuarios ref_usuario ON ref_coord.usuario_id = ref_usuario.id;
+
+COMMENT ON VIEW public.v_coordinadores_completo IS 'Vista de coordinadores con información completa de usuario, perfil y referencia';
 
 -- =====================================================
 -- FIN DEL SCRIPT
