@@ -30,7 +30,10 @@ import type { Database } from "@/lib/supabase/database.types"
 import { PermisosModal } from "./permisos-modal"
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 
-type Usuario = Database["public"]["Tables"]["usuarios"]["Row"]
+type Usuario = Database["public"]["Tables"]["usuarios"]["Row"] & {
+  ciudades?: { nombre: string } | null
+  zonas?: { nombre: string } | null
+}
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
@@ -109,7 +112,7 @@ export function PersonasTable() {
     setPersonaSeleccionada(persona)
     setPermisosModalOpen(true)
   }
-  
+
   function handleAbrirImagen(url: string) {
     setImagenSeleccionadaUrl(url)
     setImagenModalOpen(true)
@@ -266,10 +269,10 @@ export function PersonasTable() {
                             <div className="text-xs">{persona.email || "-"}</div>
                           </td>
                           <td className="px-6 py-4 text-sm text-foreground">
-                            {persona.ciudad_nombre || "-"}
+                            {persona.ciudades?.nombre || "-"}
                           </td>
                           <td className="px-6 py-4 text-sm text-foreground">
-                            {persona.zona_nombre || "-"}
+                            {persona.zonas?.nombre || "-"}
                           </td>
                           <td className="px-6 py-4">
                             <Badge className={getStatusColor(persona.estado)}>{persona.estado}</Badge>
@@ -365,7 +368,7 @@ export function PersonasTable() {
           />
         )}
       </div>
-      
+
       {/* Modal de Imagen */}
       <Dialog open={imagenModalOpen} onOpenChange={setImagenModalOpen}>
         <DialogContent className="max-w-xl">

@@ -24,10 +24,10 @@ import { CompromisosSection } from "./form-sections/compromisos"
 // Esquema de validación completo
 const personaSchema = z.object({
   // Datos Personales
-  nombres: z.string().min(2, "El nombre es requerido"),
-  apellidos: z.string().min(2, "El apellido es requerido"),
-  tipo_documento: z.string().min(1, "Tipo de documento requerido"),
-  numero_documento: z.string().min(5, "Número de documento requerido"),
+  nombres: z.string().optional(),
+  apellidos: z.string().optional(),
+  tipo_documento: z.string().optional(),
+  numero_documento: z.string().optional(),
   fecha_nacimiento: z.string().optional(),
   genero: z.string().optional(),
   estado_civil: z.string().optional(),
@@ -138,14 +138,14 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
       }
 
       if (isEditing && initialData?.id) {
-        await actualizar(initialData.id, personaData)
+        await actualizar(initialData.id, personaData as any)
         toast.success("Persona actualizada correctamente")
       } else {
         await crear({
           ...personaData,
           creado_por: usuarioActual?.id,
           estado: "activo",
-        })
+        } as any)
         toast.success("Persona creada correctamente")
       }
 
