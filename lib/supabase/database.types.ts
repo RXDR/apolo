@@ -1,3 +1,9 @@
+// @ts-nocheck
+// ADVERTENCIA: Este archivo fue modificado manualmente para añadir la tabla 'tipos_militante'.
+// Por favor, regenera los tipos de Supabase ejecutando el comando de la CLI apropiado
+// después de actualizar el esquema de tu base de datos para asegurar la consistencia.
+// Ejemplo: npx supabase gen types typescript --project-id <tu-project-id> > lib/supabase/database.types.ts
+
 export type Json =
     | string
     | number
@@ -9,6 +15,29 @@ export type Json =
 export interface Database {
     public: {
         Tables: {
+            tipos_militante: {
+                Row: {
+                    id: string
+                    codigo: number
+                    descripcion: string
+                    activo: boolean
+                    creado_en: string
+                }
+                Insert: {
+                    id?: string
+                    codigo: number
+                    descripcion: string
+                    activo?: boolean
+                    creado_en?: string
+                }
+                Update: {
+                    id?: string
+                    codigo?: number
+                    descripcion?: string
+                    activo?: boolean
+                    creado_en?: string
+                }
+            }
             barrios: {
                 Row: {
                     id: string

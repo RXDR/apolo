@@ -1,17 +1,19 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Activity, Users, BarChart3, Calendar, Settings, FileText, Building2, Menu, UserCheck } from "lucide-react"
+import { Activity, Users, BarChart3, Calendar, Settings, FileText, Building2, Menu, UserCheck, UserPlus } from "lucide-react"
 import { useState } from "react"
 
 const MENU_ITEMS = [
   { label: "Actividades", href: "/dashboard/activities", icon: Activity },
   { label: "Módulo Personas", href: "/dashboard/personas", icon: Users },
   { label: "Módulo Coordinador", href: "/dashboard/coordinador", icon: UserCheck },
+  { label: "Módulo Militante", href: "/dashboard/militante", icon: UserPlus },
   { label: "Gestión Gerencial", href: "/dashboard/management", icon: BarChart3 },
   { label: "Alistamiento Debate", href: "/dashboard/debate", icon: FileText },
   { label: "Asignar Datos", href: "/dashboard/assign-data", icon: Building2 },
   { label: "Agenda", href: "/dashboard/agenda", icon: Calendar },
+  { label: "Configuración", href: "/dashboard/configuracion", icon: Settings },
 ]
 
 export function Sidebar() {
@@ -65,13 +67,7 @@ export function Sidebar() {
 
         {/* Footer */}
         <div className="p-4 border-t border-sidebar-border">
-          <Link
-            href="#"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent/20 transition-colors text-sm font-medium"
-          >
-            <Settings className="w-5 h-5 flex-shrink-0" />
-            <span className="hidden sm:inline">Configuración</span>
-          </Link>
+          {/* El enlace de configuración se ha movido al menú principal */}
         </div>
       </aside>
     </>

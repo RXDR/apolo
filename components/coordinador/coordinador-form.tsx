@@ -193,9 +193,12 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
                 })
                 toast.success("Coordinador actualizado exitosamente")
             } else {
+                // IMPORTANTE: referencia_coordinador_id debe ser un ID de coordinador existente
+                // Si no se proporciona, debe ser undefined/null, NO usar usuario_id
                 const payload = {
                     ...data,
-                    referencia_coordinador_id: data.referencia_coordinador_id || data.usuario_id
+                    // Solo incluir referencia_coordinador_id si se proporcionó explícitamente
+                    referencia_coordinador_id: data.referencia_coordinador_id || undefined
                 }
                 await crear(payload)
                 toast.success("Coordinador creado exitosamente")

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity, Users, BarChart3, Calendar, FileText, Building2, ArrowRight } from "lucide-react"
+import { Activity, Users, BarChart3, Calendar, FileText, Building2, ArrowRight, UserCheck, UserPlus } from "lucide-react"
 
 const MODULES = [
   {
@@ -20,6 +20,22 @@ const MODULES = [
     icon: Users,
     color: "bg-green-100 dark:bg-green-900",
     accentColor: "text-green-600 dark:text-green-400",
+  },
+  {
+    title: "Módulo Coordinador",
+    description: "Gestiona coordinadores políticos con acceso al sistema",
+    href: "/dashboard/coordinador",
+    icon: UserCheck,
+    color: "bg-teal-100 dark:bg-teal-900",
+    accentColor: "text-teal-600 dark:text-teal-400",
+  },
+  {
+    title: "Módulo Militante",
+    description: "Gestiona militantes políticos del sistema",
+    href: "/dashboard/militante",
+    icon: UserPlus,
+    color: "bg-cyan-100 dark:bg-cyan-900",
+    accentColor: "text-cyan-600 dark:text-cyan-400",
   },
   {
     title: "Gestión Gerencial",

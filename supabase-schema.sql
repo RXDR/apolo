@@ -608,6 +608,55 @@ ALTER TABLE public.tipos_referencia ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.niveles_escolaridad ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tipos_vivienda ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coordinadores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.militantes ENABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- Tabla: militantes
+-- =====================================================
+CREATE TABLE IF NOT EXISTS public.militantes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    
+    -- Relación con persona
+    usuario_id UUID NOT NULL REFERENCES public.usuarios(id) ON DELETE CASCADE,
+    
+    -- Tipo de militante
+    tipo VARCHAR(50) NOT NULL,
+    
+    -- Relación con coordinador
+    coordinador_id UUID REFERENCES public.coordinadores(id) ON DELETE SET NULL,
+    
+    -- Compromisos
+    compromiso_marketing VARCHAR(255),
+    compromiso_cautivo VARCHAR(255),
+    compromiso_impacto VARCHAR(255),
+    
+    -- Formulario
+    formulario VARCHAR(255),
+    
+    -- Rol asignado
+    perfil_id UUID REFERENCES public.perfiles(id) ON DELETE SET NULL,
+    
+    -- Estado
+    estado VARCHAR(20) DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo', 'suspendido')),
+    
+    -- Auditoría
+    creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    creado_por UUID REFERENCES public.usuarios(id),
+    actualizado_por UUID REFERENCES public.usuarios(id)
+);
+
+-- Índices para militantes
+CREATE INDEX IF NOT EXISTS idx_militantes_usuario ON public.militantes(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_militantes_coordinador ON public.militantes(coordinador_id);
+CREATE INDEX IF NOT EXISTS idx_militantes_perfil ON public.militantes(perfil_id);
+CREATE INDEX IF NOT EXISTS idx_militantes_estado ON public.militantes(estado);
+CREATE INDEX IF NOT EXISTS idx_militantes_tipo ON public.militantes(tipo);
+
+COMMENT ON TABLE public.militantes IS 'Tabla de militantes políticos del sistema';
+COMMENT ON COLUMN public.militantes.usuario_id IS 'Referencia a la persona en la tabla usuarios';
+COMMENT ON COLUMN public.militantes.coordinador_id IS 'Coordinador asignado al militante';
+COMMENT ON COLUMN public.militantes.tipo IS 'Tipo de militante';
 
 -- Políticas para usuarios
 CREATE POLICY "Usuarios pueden ver su propia información"
@@ -716,6 +765,59 @@ CREATE POLICY "Usuarios con permiso pueden eliminar coordinadores"
         )
     );
 
+-- Políticas para militantes
+CREATE POLICY "Usuarios autenticados pueden leer militantes"
+    ON public.militantes FOR SELECT
+    USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Usuarios con permiso pueden crear militantes"
+    ON public.militantes FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.usuarios u
+            JOIN public.usuario_perfil up ON u.id = up.usuario_id
+            JOIN public.perfil_permiso_modulo ppm ON up.perfil_id = ppm.perfil_id
+            JOIN public.modulos m ON ppm.modulo_id = m.id
+            JOIN public.permisos p ON ppm.permiso_id = p.id
+            WHERE u.auth_user_id = auth.uid()
+            AND m.nombre = 'Módulo Militante'
+            AND p.codigo = 'CREATE'
+            AND up.activo = true
+        )
+    );
+
+CREATE POLICY "Usuarios con permiso pueden actualizar militantes"
+    ON public.militantes FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.usuarios u
+            JOIN public.usuario_perfil up ON u.id = up.usuario_id
+            JOIN public.perfil_permiso_modulo ppm ON up.perfil_id = ppm.perfil_id
+            JOIN public.modulos m ON ppm.modulo_id = m.id
+            JOIN public.permisos p ON ppm.permiso_id = p.id
+            WHERE u.auth_user_id = auth.uid()
+            AND m.nombre = 'Módulo Militante'
+            AND p.codigo = 'UPDATE'
+            AND up.activo = true
+        )
+    );
+
+CREATE POLICY "Usuarios con permiso pueden eliminar militantes"
+    ON public.militantes FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.usuarios u
+            JOIN public.usuario_perfil up ON u.id = up.usuario_id
+            JOIN public.perfil_permiso_modulo ppm ON up.perfil_id = ppm.perfil_id
+            JOIN public.modulos m ON ppm.modulo_id = m.id
+            JOIN public.permisos p ON ppm.permiso_id = p.id
+            WHERE u.auth_user_id = auth.uid()
+            AND m.nombre = 'Módulo Militante'
+            AND p.codigo = 'DELETE'
+            AND up.activo = true
+        )
+    );
+
 -- Políticas para catálogos (lectura pública para usuarios autenticados)
 CREATE POLICY "Usuarios autenticados pueden leer ciudades"
     ON public.ciudades FOR SELECT
@@ -795,7 +897,8 @@ INSERT INTO public.modulos (nombre, descripcion, orden, obligatorio, ruta, icono
 ('Agenda y Eventos', 'Calendario y gestión de reuniones', 6, false, '/dashboard/agenda', 'calendar-check'),
 ('Gestión de Terreno', 'Visitas y geolocalización', 7, false, '/dashboard/terreno', 'map-pin'),
 ('Administración', 'Gestión de usuarios y configuración', 8, false, '/dashboard/admin', 'settings'),
-('Módulo Coordinador', 'Gestión de coordinadores políticos con credenciales de acceso', 9, false, '/dashboard/coordinador', 'user-check')
+('Módulo Coordinador', 'Gestión de coordinadores políticos con credenciales de acceso', 9, false, '/dashboard/coordinador', 'user-check'),
+('Módulo Militante', 'Gestión de militantes políticos del sistema', 10, false, '/dashboard/militante', 'user-plus')
 ON CONFLICT (nombre) DO NOTHING;
 
 -- Insertar permisos CRUD básicos
@@ -933,6 +1036,42 @@ LEFT JOIN public.coordinadores ref_coord ON c.referencia_coordinador_id = ref_co
 LEFT JOIN public.usuarios ref_usuario ON ref_coord.usuario_id = ref_usuario.id;
 
 COMMENT ON VIEW public.v_coordinadores_completo IS 'Vista de coordinadores con información completa de usuario, perfil y referencia';
+
+-- Vista: militantes con información completa
+CREATE OR REPLACE VIEW public.v_militantes_completo AS
+SELECT 
+    m.id as militante_id,
+    m.tipo,
+    m.estado,
+    m.compromiso_marketing,
+    m.compromiso_cautivo,
+    m.compromiso_impacto,
+    m.formulario,
+    u.id as usuario_id,
+    u.nombres,
+    u.apellidos,
+    u.numero_documento,
+    u.tipo_documento,
+    u.celular,
+    u.email as usuario_email,
+    ciudad.nombre as ciudad_nombre,
+    zona.nombre as zona_nombre,
+    p.nombre as perfil_nombre,
+    p.id as perfil_id,
+    coord.id as coordinador_id,
+    coord.email as coordinador_email,
+    coord_usuario.nombres || ' ' || coord_usuario.apellidos as coordinador_nombre,
+    m.creado_en,
+    m.actualizado_en
+FROM public.militantes m
+INNER JOIN public.usuarios u ON m.usuario_id = u.id
+LEFT JOIN public.perfiles p ON m.perfil_id = p.id
+LEFT JOIN public.ciudades ciudad ON u.ciudad_id = ciudad.id
+LEFT JOIN public.zonas zona ON u.zona_id = zona.id
+LEFT JOIN public.coordinadores coord ON m.coordinador_id = coord.id
+LEFT JOIN public.usuarios coord_usuario ON coord.usuario_id = coord_usuario.id;
+
+COMMENT ON VIEW public.v_militantes_completo IS 'Vista de militantes con información completa de usuario, perfil, coordinador y compromisos';
 
 -- =====================================================
 -- FIN DEL SCRIPT

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 
 interface Coordinador {
@@ -51,7 +51,7 @@ export function useCoordinadores() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 
-    async function listar(filtros: FiltrosCoordinadores = {}, page = 1, pageSize = 10) {
+    const listar = useCallback(async (filtros: FiltrosCoordinadores = {}, page = 1, pageSize = 10) => {
         try {
             setLoading(true)
             setError(null)
@@ -101,9 +101,9 @@ export function useCoordinadores() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function obtenerPorId(id: string) {
+    const obtenerPorId = useCallback(async (id: string) => {
         try {
             setLoading(true)
             setError(null)
@@ -124,9 +124,9 @@ export function useCoordinadores() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function crear(coordinadorData: CrearCoordinadorData) {
+    const crear = useCallback(async (coordinadorData: CrearCoordinadorData) => {
         try {
             setLoading(true)
             setError(null)
@@ -153,9 +153,9 @@ export function useCoordinadores() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function actualizar(id: string, coordinadorData: ActualizarCoordinadorData) {
+    const actualizar = useCallback(async (id: string, coordinadorData: ActualizarCoordinadorData) => {
         try {
             setLoading(true)
             setError(null)
@@ -177,9 +177,9 @@ export function useCoordinadores() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function eliminar(id: string) {
+    const eliminar = useCallback(async (id: string) => {
         try {
             setLoading(true)
             setError(null)
@@ -196,9 +196,9 @@ export function useCoordinadores() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function cambiarEstado(id: string, nuevoEstado: 'activo' | 'inactivo' | 'suspendido') {
+    const cambiarEstado = useCallback(async (id: string, nuevoEstado: 'activo' | 'inactivo' | 'suspendido') => {
         try {
             setLoading(true)
             setError(null)
@@ -220,9 +220,9 @@ export function useCoordinadores() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function buscarCoordinadores(termino: string) {
+    const buscarCoordinadores = useCallback(async (termino: string) => {
         try {
             setLoading(true)
             setError(null)
@@ -244,7 +244,7 @@ export function useCoordinadores() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
     return {
         listar,

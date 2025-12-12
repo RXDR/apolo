@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import type { Database } from '@/lib/supabase/database.types'
 
@@ -20,7 +20,7 @@ export function usePersonas() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 
-    async function listar(filtros: FiltrosPersonas = {}, page = 1, pageSize = 10) {
+    const listar = useCallback(async (filtros: FiltrosPersonas = {}, page = 1, pageSize = 10) => {
         try {
             setLoading(true)
             setError(null)
@@ -74,9 +74,9 @@ export function usePersonas() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function obtenerPorId(id: string) {
+    const obtenerPorId = useCallback(async (id: string) => {
         try {
             setLoading(true)
             setError(null)
@@ -97,9 +97,9 @@ export function usePersonas() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function crear(persona: UsuarioInsert) {
+    const crear = useCallback(async (persona: UsuarioInsert) => {
         try {
             setLoading(true)
             setError(null)
@@ -120,9 +120,9 @@ export function usePersonas() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function actualizar(id: string, persona: UsuarioUpdate) {
+    const actualizar = useCallback(async (id: string, persona: UsuarioUpdate) => {
         try {
             setLoading(true)
             setError(null)
@@ -144,9 +144,9 @@ export function usePersonas() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function eliminar(id: string) {
+    const eliminar = useCallback(async (id: string) => {
         try {
             setLoading(true)
             setError(null)
@@ -163,9 +163,9 @@ export function usePersonas() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function cambiarEstado(id: string, nuevoEstado: 'activo' | 'inactivo' | 'suspendido') {
+    const cambiarEstado = useCallback(async (id: string, nuevoEstado: 'activo' | 'inactivo' | 'suspendido') => {
         try {
             setLoading(true)
             setError(null)
@@ -187,9 +187,9 @@ export function usePersonas() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
-    async function buscarReferentes(termino: string) {
+    const buscarReferentes = useCallback(async (termino: string) => {
         try {
             setLoading(true)
             setError(null)
@@ -211,7 +211,7 @@ export function usePersonas() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [])
 
     return {
         listar,
