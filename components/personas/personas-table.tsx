@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
 import {
@@ -26,6 +28,7 @@ import { usePermisos } from "@/lib/hooks/use-permisos"
 import { toast } from "sonner"
 import type { Database } from "@/lib/supabase/database.types"
 import { PermisosModal } from "./permisos-modal"
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 
 type Usuario = Database["public"]["Tables"]["usuarios"]["Row"]
 
@@ -366,6 +369,12 @@ export function PersonasTable() {
       {/* Modal de Imagen */}
       <Dialog open={imagenModalOpen} onOpenChange={setImagenModalOpen}>
         <DialogContent className="max-w-xl">
+          <VisuallyHidden>
+            <DialogTitle>Imagen de Perfil</DialogTitle>
+            <DialogDescription>
+              Imagen de perfil ampliada.
+            </DialogDescription>
+          </VisuallyHidden>
           {imagenSeleccionadaUrl && (
             <Image
               src={imagenSeleccionadaUrl}
