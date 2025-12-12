@@ -31,6 +31,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { createPublicidadVehiculo, updatePublicidadVehiculo, type PublicidadVehiculo } from '@/lib/actions/debate'
+import { getCiudades, getBarrios } from '@/lib/actions/configuracion'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -80,28 +81,16 @@ export function PublicidadVehiculoForm({ publicidad, trigger }: PublicidadVehicu
                     .from('coordinadores')
                     .select('id, usuario:usuarios(nombres, apellidos)')
                 if (coords) setCoordinadores(coords)
-
-                const { data: cities } = await supabase
-                    .from('ciudades')
-                    .select('id, nombre')
-                if (cities) setCiudades(cities)
             }
             fetchData()
+            getCiudades().then(setCiudades).catch(console.error)
         }
     }, [open])
 
     const selectedCiudad = form.watch('ciudad_id')
     useEffect(() => {
         if (selectedCiudad) {
-            const fetchBarrios = async () => {
-                const supabase = createClient()
-                const { data } = await supabase
-                    .from('barrios')
-                    .select('id, nombre')
-                    .eq('ciudad_id', selectedCiudad)
-                if (data) setBarrios(data)
-            }
-            fetchBarrios()
+            getBarrios(selectedCiudad).then(setBarrios).catch(console.error)
         } else {
             setBarrios([])
         }

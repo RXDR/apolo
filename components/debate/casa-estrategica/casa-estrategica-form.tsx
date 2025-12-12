@@ -31,9 +31,10 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { createCasaEstrategica, updateCasaEstrategica, getCoordinadoresForSelect, getMilitantesByCoordinador, type CasaEstrategica } from '@/lib/actions/debate'
+import { getCiudades, getBarrios } from '@/lib/actions/configuracion'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+// import { createClient } from '@/lib/supabase/client' // Removed as we use server actions
 
 const formSchema = z.object({
     coordinador_id: z.string().uuid({ message: 'Selecciona un coordinador válido' }),
@@ -82,15 +83,7 @@ export function CasaEstrategicaForm({ casa, trigger }: CasaEstrategicaFormProps)
     useEffect(() => {
         if (open) {
             getCoordinadoresForSelect().then(setCoordinadores).catch(console.error)
-
-            const fetchData = async () => {
-                const supabase = createClient()
-                const { data: cities } = await supabase
-                    .from('ciudades')
-                    .select('id, nombre')
-                if (cities) setCiudades(cities)
-            }
-            fetchData()
+            getCiudades().then(setCiudades).catch(console.error)
         }
     }, [open])
 
@@ -105,15 +98,7 @@ export function CasaEstrategicaForm({ casa, trigger }: CasaEstrategicaFormProps)
     const selectedCiudad = form.watch('ciudad_id')
     useEffect(() => {
         if (selectedCiudad) {
-            const fetchBarrios = async () => {
-                const supabase = createClient()
-                const { data } = await supabase
-                    .from('barrios')
-                    .select('id, nombre')
-                    .eq('ciudad_id', selectedCiudad)
-                if (data) setBarrios(data)
-            }
-            fetchBarrios()
+            getBarrios(selectedCiudad).then(setBarrios).catch(console.error)
         } else {
             setBarrios([])
         }
