@@ -46,6 +46,7 @@ export function CasaEstrategicaTable({ casas }: CasaEstrategicaTableProps) {
                     <TableRow>
                         <TableHead>Fecha Inst.</TableHead>
                         <TableHead>Coordinador</TableHead>
+                        <TableHead>Militante</TableHead>
                         <TableHead>Dirección</TableHead>
                         <TableHead>Ciudad/Barrio</TableHead>
                         <TableHead>Publicidad</TableHead>
@@ -56,7 +57,7 @@ export function CasaEstrategicaTable({ casas }: CasaEstrategicaTableProps) {
                 <TableBody>
                     {casas.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
+                            <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
                                 No hay casas estratégicas registradas.
                             </TableCell>
                         </TableRow>
@@ -66,6 +67,9 @@ export function CasaEstrategicaTable({ casas }: CasaEstrategicaTableProps) {
                                 <TableCell>{casa.fecha_instalacion}</TableCell>
                                 <TableCell>
                                     {casa.coordinador?.usuario?.nombres} {casa.coordinador?.usuario?.apellidos}
+                                </TableCell>
+                                <TableCell>
+                                    {casa.militante?.usuario?.nombres} {casa.militante?.usuario?.apellidos}
                                 </TableCell>
                                 <TableCell>{casa.direccion}</TableCell>
                                 <TableCell>

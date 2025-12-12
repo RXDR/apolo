@@ -46,6 +46,7 @@ export function InconsistenciasTable({ inconsistencias }: InconsistenciasTablePr
                     <TableRow>
                         <TableHead>Fecha</TableHead>
                         <TableHead>Coordinador</TableHead>
+                        <TableHead>Militante</TableHead>
                         <TableHead className="text-right">Radical</TableHead>
                         <TableHead className="text-right">Exclusión</TableHead>
                         <TableHead className="text-right">Fuera B/Q</TableHead>
@@ -56,7 +57,7 @@ export function InconsistenciasTable({ inconsistencias }: InconsistenciasTablePr
                 <TableBody>
                     {inconsistencias.length === 0 ? (
                         <TableRow>
-                            <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
+                            <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
                                 No hay inconsistencias registradas.
                             </TableCell>
                         </TableRow>
@@ -66,6 +67,9 @@ export function InconsistenciasTable({ inconsistencias }: InconsistenciasTablePr
                                 <TableCell>{item.fecha_inconsistencia}</TableCell>
                                 <TableCell>
                                     {item.coordinador?.usuario?.nombres} {item.coordinador?.usuario?.apellidos}
+                                </TableCell>
+                                <TableCell>
+                                    {item.militante?.usuario?.nombres} {item.militante?.usuario?.apellidos}
                                 </TableCell>
                                 <TableCell className="text-right">{item.radical}</TableCell>
                                 <TableCell className="text-right">{item.exclusion}</TableCell>

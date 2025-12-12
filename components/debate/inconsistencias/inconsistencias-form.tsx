@@ -30,13 +30,13 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { createInconsistencia, updateInconsistencia, type Inconsistencia } from '@/lib/actions/debate'
+import { createInconsistencia, updateInconsistencia, getCoordinadoresForSelect, getMilitantesByCoordinador, type Inconsistencia } from '@/lib/actions/debate'
 import { toast } from 'sonner'
 import { Plus } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 
 const formSchema = z.object({
     coordinador_id: z.string().uuid({ message: 'Selecciona un coordinador válido' }),
+    militante_id: z.string().uuid({ message: 'Selecciona un militante válido' }).optional().or(z.literal('')),
     radical: z.coerce.number().min(0, 'Debe ser un número positivo'),
     exclusion: z.coerce.number().min(0, 'Debe ser un número positivo'),
     fuera_barranquilla: z.coerce.number().min(0, 'Debe ser un número positivo'),
@@ -56,11 +56,13 @@ export function InconsistenciasForm({ inconsistencia, trigger }: Inconsistencias
     const [open, setOpen] = useState(false)
     const isEditing = !!inconsistencia
     const [coordinadores, setCoordinadores] = useState<any[]>([])
+    const [militantes, setMilitantes] = useState<any[]>([])
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             coordinador_id: inconsistencia?.coordinador_id || '',
+            militante_id: inconsistencia?.militante_id || '',
             radical: inconsistencia?.radical || 0,
             exclusion: inconsistencia?.exclusion || 0,
             fuera_barranquilla: inconsistencia?.fuera_barranquilla || 0,
@@ -70,18 +72,21 @@ export function InconsistenciasForm({ inconsistencia, trigger }: Inconsistencias
         },
     })
 
+    const selectedCoordinadorId = form.watch('coordinador_id')
+
     useEffect(() => {
         if (open) {
-            const fetchCoordinadores = async () => {
-                const supabase = createClient()
-                const { data } = await supabase
-                    .from('coordinadores')
-                    .select('id, usuario:usuarios(nombres, apellidos)')
-                if (data) setCoordinadores(data)
-            }
-            fetchCoordinadores()
+            getCoordinadoresForSelect().then(setCoordinadores).catch(console.error)
         }
     }, [open])
+
+    useEffect(() => {
+        if (selectedCoordinadorId) {
+            getMilitantesByCoordinador(selectedCoordinadorId).then(setMilitantes).catch(console.error)
+        } else {
+            setMilitantes([])
+        }
+    }, [selectedCoordinadorId])
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         try {
@@ -124,30 +129,59 @@ export function InconsistenciasForm({ inconsistencia, trigger }: Inconsistencias
                 </DialogHeader>
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="coordinador_id"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Coordinador</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecciona un coordinador" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            {coordinadores.map((c) => (
-                                                <SelectItem key={c.id} value={c.id}>
-                                                    {c.usuario.nombres} {c.usuario.apellidos}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="coordinador_id"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Coordinador</FormLabel>
+                                        <Select onValueChange={(value) => {
+                                            field.onChange(value)
+                                            form.setValue('militante_id', '') // Reset militante when coordinador changes
+                                        }} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecciona un coordinador" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {coordinadores.map((c) => (
+                                                    <SelectItem key={c.id} value={c.id}>
+                                                        {c.usuario.nombres} {c.usuario.apellidos}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="militante_id"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Militante</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedCoordinadorId}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecciona un militante" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {militantes.map((m) => (
+                                                    <SelectItem key={m.id} value={m.id}>
+                                                        {m.usuario.nombres} {m.usuario.apellidos} ({m.tipo})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
 
                         <div className="grid grid-cols-3 gap-4">
                             <FormField
