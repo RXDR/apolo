@@ -156,7 +156,6 @@ create table public.usuarios (
   email character varying(255) null,
   foto_perfil_url text null,
   celular character varying(20) null,
-  telefono_fijo character varying(20) null,
   whatsapp character varying(20) null,
   telefono character varying(20) null,
   direccion text null,
@@ -178,8 +177,6 @@ create table public.usuarios (
   facebook character varying(255) null,
   twitter character varying(255) null,
   instagram character varying(255) null,
-  linkedin character varying(255) null,
-  tiktok character varying(255) null,
   nombre_familiar_cercano character varying(200) null,
   celular_familiar_cercano character varying(20) null,
   referencia_seleccion character varying(100) null,
@@ -189,7 +186,6 @@ create table public.usuarios (
   beneficiario character varying(100) null,
   zona_id uuid null,
   zona_nombre character varying(100) null,
-  tipo_referencia_id uuid null,
   compromiso_marketing integer null default 0,
   compromiso_impacto integer null default 0,
   compromiso_cautivo integer null default 0,
@@ -209,17 +205,21 @@ create table public.usuarios (
   ingresos_rango character varying(50) null,
   lider_responsable character varying(255) null,
   referido_por character varying(255) null,
+  telefono_fijo character varying(20) null,
+  linkedin character varying(255) null,
+  tiktok character varying(255) null,
+  tipo_referencia_id uuid null,
   constraint usuarios_pkey primary key (id),
   constraint usuarios_numero_documento_key unique (numero_documento),
   constraint usuarios_email_key unique (email),
   constraint usuarios_actualizado_por_fkey foreign KEY (actualizado_por) references usuarios (id),
+  constraint usuarios_tipo_referencia_id_fkey foreign KEY (tipo_referencia_id) references tipos_referencia (id) on delete set null,
   constraint usuarios_auth_user_id_fkey foreign KEY (auth_user_id) references auth.users (id) on delete CASCADE,
   constraint usuarios_creado_por_fkey foreign KEY (creado_por) references usuarios (id),
   constraint usuarios_barrio_id_fkey foreign KEY (barrio_id) references barrios (id) on delete set null,
   constraint usuarios_localidad_id_fkey foreign KEY (localidad_id) references localidades (id) on delete set null,
   constraint usuarios_ciudad_id_fkey foreign KEY (ciudad_id) references ciudades (id) on delete set null,
   constraint usuarios_zona_id_fkey foreign KEY (zona_id) references zonas (id) on delete set null,
-  constraint usuarios_tipo_referencia_id_fkey foreign KEY (tipo_referencia_id) references tipos_referencia (id) on delete set null,
   constraint chk_estado check (
     (
       (estado)::text = any (
@@ -272,25 +272,6 @@ create index IF not exists idx_usuarios_auth_user on public.usuarios using btree
 create trigger trigger_actualizar_usuarios BEFORE
 update on usuarios for EACH row
 execute FUNCTION actualizar_timestamp ();
--------------------
--- Tabla: usuarios
-
-
--- Índices para usuarios
-CREATE INDEX IF NOT EXISTS idx_usuarios_documento ON public.usuarios(numero_documento);
-CREATE INDEX IF NOT EXISTS idx_usuarios_tipo_documento ON public.usuarios(tipo_documento);
-CREATE INDEX IF NOT EXISTS idx_usuarios_email ON public.usuarios(email);
-CREATE INDEX IF NOT EXISTS idx_usuarios_estado ON public.usuarios(estado);
-CREATE INDEX IF NOT EXISTS idx_usuarios_zona ON public.usuarios(zona_id);
-CREATE INDEX IF NOT EXISTS idx_usuarios_localidad ON public.usuarios(localidad_id);
-CREATE INDEX IF NOT EXISTS idx_usuarios_ciudad ON public.usuarios(ciudad_id);
-CREATE INDEX IF NOT EXISTS idx_usuarios_barrio ON public.usuarios(barrio_id);
-CREATE INDEX IF NOT EXISTS idx_usuarios_nombres_apellidos ON public.usuarios(nombres, apellidos);
-CREATE INDEX IF NOT EXISTS idx_usuarios_auth_user ON public.usuarios(auth_user_id);
-
-COMMENT ON TABLE public.usuarios IS 'Tabla principal de usuarios/personas del sistema CRM político';
-COMMENT ON COLUMN public.usuarios.auth_user_id IS 'Referencia al usuario de autenticación de Supabase';
-
 -- =====================================================
 -- Tabla: coordinadores
 -- =====================================================
