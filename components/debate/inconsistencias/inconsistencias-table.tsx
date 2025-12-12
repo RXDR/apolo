@@ -65,7 +65,7 @@ export function InconsistenciasTable({ inconsistencias }: InconsistenciasTablePr
                             <TableRow key={item.id}>
                                 <TableCell>{item.fecha_inconsistencia}</TableCell>
                                 <TableCell>
-                                    {item.coordinador?.nombres} {item.coordinador?.apellidos}
+                                    {item.coordinador?.usuario?.nombres} {item.coordinador?.usuario?.apellidos}
                                 </TableCell>
                                 <TableCell className="text-right">{item.radical}</TableCell>
                                 <TableCell className="text-right">{item.exclusion}</TableCell>
@@ -107,6 +107,6 @@ export function InconsistenciasTable({ inconsistencias }: InconsistenciasTablePr
                     )}
                 </TableBody>
             </Table>
-        </div>
+        </div >
     )
 }

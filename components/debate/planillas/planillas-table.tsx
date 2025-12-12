@@ -71,7 +71,7 @@ export function PlanillasTable({ planillas }: PlanillasTableProps) {
                                 </TableCell>
                                 <TableCell>{planilla.fecha_planilla}</TableCell>
                                 <TableCell>
-                                    {planilla.coordinador?.nombres} {planilla.coordinador?.apellidos}
+                                    {planilla.coordinador?.usuario?.nombres} {planilla.coordinador?.usuario?.apellidos}
                                 </TableCell>
                                 <TableCell>
                                     {planilla.militante?.usuario?.nombres} {planilla.militante?.usuario?.apellidos}

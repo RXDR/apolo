@@ -65,7 +65,7 @@ export function CasaEstrategicaTable({ casas }: CasaEstrategicaTableProps) {
                             <TableRow key={casa.id}>
                                 <TableCell>{casa.fecha_instalacion}</TableCell>
                                 <TableCell>
-                                    {casa.coordinador?.nombres} {casa.coordinador?.apellidos}
+                                    {casa.coordinador?.usuario?.nombres} {casa.coordinador?.usuario?.apellidos}
                                 </TableCell>
                                 <TableCell>{casa.direccion}</TableCell>
                                 <TableCell>

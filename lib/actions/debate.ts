@@ -14,8 +14,8 @@ export type Planilla = {
     marketing: number
     impacto: number
     fecha_planilla: string
-    coordinador?: { nombres: string; apellidos: string }
-    militante?: { tipo: string; perfil?: { nombre: string } }
+    coordinador?: { usuario: { nombres: string; apellidos: string } }
+    militante?: { tipo: string; usuario?: { nombres: string; apellidos: string } }
 }
 
 export type Inconsistencia = {
@@ -27,7 +27,7 @@ export type Inconsistencia = {
     fecha_inconsistencia: string
     fecha_resolucion?: string
     cantidad_resuelto?: number
-    coordinador?: { nombres: string; apellidos: string }
+    coordinador?: { usuario: { nombres: string; apellidos: string } }
 }
 
 export type CasaEstrategica = {
@@ -40,7 +40,7 @@ export type CasaEstrategica = {
     tipo_publicidad?: string
     fecha_instalacion: string
     fecha_desinstalacion?: string
-    coordinador?: { nombres: string; apellidos: string }
+    coordinador?: { usuario: { nombres: string; apellidos: string } }
     ciudad?: { nombre: string }
     barrio?: { nombre: string }
 }
@@ -53,7 +53,7 @@ export type VehiculoAmigo = {
     tipo_vehiculo?: string
     fecha_registro: string
     observaciones?: string
-    coordinador?: { nombres: string; apellidos: string }
+    coordinador?: { usuario: { nombres: string; apellidos: string } }
 }
 
 export type PublicidadVehiculo = {
@@ -65,7 +65,7 @@ export type PublicidadVehiculo = {
     barrio_id: string
     fecha_instalacion: string
     fecha_desinstalacion?: string
-    coordinador?: { nombres: string; apellidos: string }
+    coordinador?: { usuario: { nombres: string; apellidos: string } }
     ciudad?: { nombre: string }
     barrio?: { nombre: string }
 }

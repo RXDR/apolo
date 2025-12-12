@@ -64,7 +64,7 @@ export function PublicidadVehiculoTable({ publicidad }: PublicidadVehiculoTableP
                             <TableRow key={item.id}>
                                 <TableCell>{item.fecha_instalacion}</TableCell>
                                 <TableCell>
-                                    {item.coordinador?.nombres} {item.coordinador?.apellidos}
+                                    {item.coordinador?.usuario?.nombres} {item.coordinador?.usuario?.apellidos}
                                 </TableCell>
                                 <TableCell>{item.tipo_publicidad}</TableCell>
                                 <TableCell>{item.medidas}</TableCell>
@@ -107,6 +107,6 @@ export function PublicidadVehiculoTable({ publicidad }: PublicidadVehiculoTableP
                     )}
                 </TableBody>
             </Table>
-        </div>
+        </div >
     )
 }

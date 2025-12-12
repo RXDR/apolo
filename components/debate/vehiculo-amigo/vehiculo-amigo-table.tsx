@@ -65,7 +65,7 @@ export function VehiculoAmigoTable({ vehiculos }: VehiculoAmigoTableProps) {
                             <TableRow key={vehiculo.id}>
                                 <TableCell>{vehiculo.fecha_registro}</TableCell>
                                 <TableCell>
-                                    {vehiculo.coordinador?.nombres} {vehiculo.coordinador?.apellidos}
+                                    {vehiculo.coordinador?.usuario?.nombres} {vehiculo.coordinador?.usuario?.apellidos}
                                 </TableCell>
                                 <TableCell>{vehiculo.propietario}</TableCell>
                                 <TableCell>{vehiculo.placa}</TableCell>
