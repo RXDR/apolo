@@ -1,42 +1,150 @@
-CUSTOM BUILT - CRM - FABRI 
-1. Estructura Jerárquica y Organizacional: 
-La aplicación maneja una cadena de mando piramidal para organizar el equipo de campaña: 
-● Dirigentes: Es el nivel superior visible en la lista inicial. 
-● Coordinadores: Cada dirigente tiene asignados coordinadores (ej. "Coordinador Electoral"). 
-● Líderes/Militantes: Los coordinadores a su vez tienen a su cargo a los líderes de base o 
-militantes que hacen el trabajo de campo. 
-2. Base de Datos de Personas (Fichas Técnicas): 
-Permite el registro y visualización detallada de cada persona involucrada (ya sea personal o 
-posibles votantes). La ficha incluye: 
-● Identificación: Foto de perfil, nombre completo y número de cédula. 
-● Datos Demográficos: Lugar de nacimiento, dirección, barrio, género, estado civil. 
-● Contacto: Celular, WhatsApp, redes sociales (Facebook, Instagram, Twitter). 
-● Perfil Socioeconómico: Nivel de escolaridad, perfil profesional, número de hijos, tipo de 
-vivienda. 
-● Vinculación: Referencias familiares y compromiso de gestión. 
-3. Gestión de Terreno y Geolocalización: 
-● Gestión de Visitas: Permite registrar las visitas que hacen los líderes a los votantes ("Casa 
-Estratégica"). 
-● Geolocalización: Tiene un botón específico para capturar la ubicación GPS exacta de la 
-visita, asegurando que el trabajo de campo se realizó realmente en el lugar indicado. 
-● Verificar Sticker: Una función para controlar la publicidad visual (calcomanías) entregada o 
-instalada. 
-4. Administración y Control de Personal: 
-● El usuario administrador puede cambiar el estatus de los miembros del equipo: Activo, 
-Inactivo o Suspendido. Esto sirve para gestionar el comportamiento de los líderes ("si se 
-porta mal o se porta bien", según el narrador). 
-5. Agenda y Eventos: 
-● Reuniones: Un módulo para crear y verificar asistencia a reuniones políticas. 
-● Agenda de Visitas: Un calendario para organizar las actividades futuras. 
-6. Reportes y Métricas de Rendimiento: 
-● La aplicación genera reportes estadísticos que muestran el desempeño de cada líder o 
-coordinador. 
-● Muestra columnas de "Faltante" (cuántos votos o registros les faltan) y "% Cumplimiento" 
-(porcentaje de la meta alcanzada), permitiendo ver quién está trabajando efectivamente (ej. 
-porcentajes del 97.5% vs 0.0%). 
-MODULOS OBLIGATORIOS  
-1.Actividades 
-2.Gestion gerencial 
-3.Alistamiento de debate  
-4.Modulo personas 
-5.crear asignar datos
+el módulo “Alistamiento Debate” para integrarlo a mi sistema actual.
+Mi app ya tiene un diseño, estilos y una arquitectura establecida, así que no inventes estilos nuevos, sino que adapta todas las interfaces a mis componentes actuales (inputs, modales, tablas, botones, layout, colores, spacing).
+
+A continuación te describo el módulo y todas las vistas que debe incluir.
+
+🔶 CONTEXTO DEL MÓDULO
+
+El módulo se llama Alistamiento Debate y contiene varios submódulos.
+Su función es registrar información administrativa generada por coordinadores y militantes.
+
+🔷 SUBMÓDULOS A CREAR
+### 1️⃣ Planillas
+
+Formulario con los siguientes campos:
+
+Seleccionar Coordinador (dropdown cargado desde Supabase)
+
+Seleccionar Militante (dropdown dependiente del coordinador)
+
+Radicado (número)
+
+Cautivo (número)
+
+Marketing (número)
+
+Impacto (número)
+
+Fecha Planilla (date picker)
+
+Acciones:
+
+Crear
+
+Editar
+
+Listar con tabla
+
+Eliminar
+
+Validaciones:
+
+Ningún campo obligatorio vacío
+
+Solo números válidos
+
+Fecha válida
+
+2️⃣ Inconsistencias
+
+Campos:
+
+Coordinador (dropdown)
+
+Radical (número)
+
+Exclusión (número)
+
+Fuera Barranquilla (número)
+
+Fecha Inconsistencia (date)
+
+Fecha Resolución (date)
+
+Cantidad Resuelto (número)
+
+Funciones:
+
+Crear, Editar, Listar, Borrar
+
+3️⃣ Casa Estratégica
+
+Campos:
+
+Coordinador (dropdown)
+
+Dirección (texto)
+
+Ciudad (dropdown)
+
+Barrio (dropdown dependiente)
+
+Medidas (texto)
+
+Tipo de Publicidad (dropdown)
+
+Fecha Instalación (date)
+
+Fecha Desinstalación (date opcional)
+
+CRUD completo.
+
+4️⃣ Vehículo Amigo
+
+Campos:
+
+Coordinador
+
+Propietario
+
+Número de Placa
+
+Tipo de Vehículo
+
+Fecha Registro
+
+Observaciones
+
+CRUD completo.
+
+5️⃣ Publicidad Vehículo
+
+Campos:
+
+Coordinador
+
+Tipo de Publicidad
+
+Medidas
+
+Ciudad
+
+Barrio
+
+Fecha Instalación
+
+Fecha Desinstalación
+
+CRUD completo.
+
+6️⃣ Reportes (solo lectura)
+
+Pantalla con:
+
+Filtros avanzados: Coordinador, fecha, tipo
+
+Tablas resumidas por cada submódulo
+
+Exportación XLS y PDF
+
+📌 REQUISITOS DEL RESULTADO
+
+Cuando generes la respuesta, produce:
+
+✔ Código de las vistas (React, Vue o el stack que yo esté usando — te lo diré cuando respondas)
+✔ Componentes separados reutilizables
+✔ Llamadas a Supabase
+✔ Validaciones
+✔ Diseño totalmente adaptado al estilo actual de mi app (NO inventar uno nuevo)
+✔ Estructura de archivos sugerida
+✔ Explicación del flujo
