@@ -1,127 +1,150 @@
-"use client"
+'use client'
 
-import type React from "react"
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { createActivity, updateActivity } from '@/lib/actions/activities'
+import { toast } from 'sonner'
+import { Plus, Pencil } from 'lucide-react'
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { FormField } from "@/components/shared/form-field"
-import { FormSelect } from "@/components/shared/form-select"
-import { ArrowLeft } from "lucide-react"
-import Link from "next/link"
+const formSchema = z.object({
+  nombre: z.string().min(2, {
+    message: 'El nombre debe tener al menos 2 caracteres.',
+  }),
+  estado: z.enum(['vigente', 'no_vigente'], {
+    required_error: 'Por favor selecciona un estado.',
+  }),
+})
 
-export function ActivityForm() {
-  const [formData, setFormData] = useState({
-    title: "",
-    type: "",
-    date: "",
-    time: "",
-    location: "",
-    description: "",
-    attendees: "",
+interface ActivityFormProps {
+  activity?: {
+    id: string
+    nombre: string
+    estado: 'vigente' | 'no_vigente'
+  }
+  trigger?: React.ReactNode
+}
+
+export function ActivityForm({ activity, trigger }: ActivityFormProps) {
+  const [open, setOpen] = useState(false)
+  const isEditing = !!activity
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nombre: activity?.nombre || '',
+      estado: activity?.estado || 'vigente',
+    },
   })
 
-  const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      const formData = new FormData()
+      formData.append('nombre', values.nombre)
+      formData.append('estado', values.estado)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Activity form submitted:", formData)
+      if (isEditing && activity) {
+        await updateActivity(activity.id, formData)
+        toast.success('Actividad actualizada correctamente')
+      } else {
+        await createActivity(formData)
+        toast.success('Actividad creada correctamente')
+      }
+      setOpen(false)
+      form.reset()
+    } catch (error) {
+      toast.error('Ocurrió un error al guardar la actividad')
+      console.error(error)
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/dashboard/activities">
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="w-4 h-4" />
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button>
+            <Plus className="mr-2 h-4 w-4" /> Nueva Actividad
           </Button>
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Nueva Actividad</h1>
-          <p className="text-muted-foreground">Registra una nueva actividad de campaña</p>
-        </div>
-      </div>
-
-      <Card className="border-0 shadow-sm">
-        <CardHeader>
-          <CardTitle>Detalles de la Actividad</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                label="Título de la Actividad"
-                placeholder="Ej: Visita Barrial"
-                required
-                value={formData.title}
-                onChange={(e) => handleChange("title", e.target.value)}
-              />
-              <FormSelect
-                label="Tipo de Actividad"
-                options={[
-                  { value: "visita", label: "Visita" },
-                  { value: "reunion", label: "Reunión" },
-                  { value: "evento", label: "Evento" },
-                  { value: "capacitacion", label: "Capacitación" },
-                ]}
-                required
-                value={formData.type}
-                onChange={(e) => handleChange("type", e.target.value)}
-              />
-              <FormField
-                label="Fecha"
-                type="date"
-                required
-                value={formData.date}
-                onChange={(e) => handleChange("date", e.target.value)}
-              />
-              <FormField
-                label="Hora"
-                type="time"
-                value={formData.time}
-                onChange={(e) => handleChange("time", e.target.value)}
-              />
-              <FormField
-                label="Ubicación"
-                placeholder="Ej: Centro, Ciudad"
-                value={formData.location}
-                onChange={(e) => handleChange("location", e.target.value)}
-              />
-              <FormField
-                label="Asistentes Esperados"
-                type="number"
-                placeholder="0"
-                value={formData.attendees}
-                onChange={(e) => handleChange("attendees", e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-foreground block mb-2">Descripción</label>
-              <textarea
-                placeholder="Describe los detalles de la actividad..."
-                rows={4}
-                value={formData.description}
-                onChange={(e) => handleChange("description", e.target.value)}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background text-foreground"
-              />
-            </div>
-
-            <div className="flex gap-4">
-              <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
-                Guardar Actividad
-              </Button>
-              <Link href="/dashboard/activities">
-                <Button type="button" variant="outline">
-                  Cancelar
-                </Button>
-              </Link>
-            </div>
+        )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>{isEditing ? 'Editar Actividad' : 'Nueva Actividad'}</DialogTitle>
+          <DialogDescription>
+            {isEditing
+              ? 'Modifica los detalles de la actividad aquí.'
+              : 'Ingresa los detalles de la nueva actividad.'}
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="nombre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre de la Actividad</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ej. Campaña de Salud" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="estado"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Estado</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un estado" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="vigente">Vigente</SelectItem>
+                      <SelectItem value="no_vigente">No Vigente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit">Guardar</Button>
+            </DialogFooter>
           </form>
-        </CardContent>
-      </Card>
-    </div>
+        </Form>
+      </DialogContent>
+    </Dialog>
   )
 }

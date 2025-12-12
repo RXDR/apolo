@@ -4,7 +4,8 @@ import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        const supabase = createClient(cookies())
+        const cookieStore = await cookies()
+        const supabase = createClient(cookieStore)
         const { id } = params
 
         const { data, error } = await supabase
@@ -31,7 +32,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        const supabase = createClient(cookies())
+        const cookieStore = await cookies()
+        const supabase = createClient(cookieStore)
         const { id } = params
         const body = await request.json()
 
@@ -80,7 +82,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        const supabase = createClient(cookies())
+        const cookieStore = await cookies()
+        const supabase = createClient(cookieStore)
         const adminClient = createAdminClient()
         const { id } = params
 

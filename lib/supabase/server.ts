@@ -3,7 +3,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from './database.types'
 
-export function createClient(cookieStore: ReturnType<typeof cookies>) {
+export function createClient(cookieStore: Awaited<ReturnType<typeof cookies>>) {
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -37,12 +37,12 @@ export function createClient(cookieStore: ReturnType<typeof cookies>) {
 
 export function createAdminClient() {
     // Intentar múltiples formas de acceder a las variables de entorno
-    const supabaseUrl = 
-        process.env.NEXT_PUBLIC_SUPABASE_URL || 
+    const supabaseUrl =
+        process.env.NEXT_PUBLIC_SUPABASE_URL ||
         process.env.SUPABASE_URL
-    
-    const supabaseServiceRoleKey = 
-        process.env.SUPABASE_SERVICE_ROLE_KEY || 
+
+    const supabaseServiceRoleKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
         process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY
 
     // Logging para debug (solo en desarrollo)

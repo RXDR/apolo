@@ -4,7 +4,8 @@ import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
     try {
-        const supabase = createClient(cookies())
+        const cookieStore = await cookies()
+        const supabase = createClient(cookieStore)
 
         const { searchParams } = new URL(request.url)
         const page = parseInt(searchParams.get('page') || '1')
@@ -65,8 +66,9 @@ export async function POST(request: NextRequest) {
             console.log('    SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅' : '❌')
         }
 
-        const supabase = createClient(cookies())
-        
+        const cookieStore = await cookies()
+        const supabase = createClient(cookieStore)
+
         // Crear admin client con manejo de errores mejorado
         // Este cliente usa SERVICE_ROLE_KEY para crear usuarios en Auth y leer tablas sin restricciones RLS
         let adminClient
@@ -81,14 +83,14 @@ export async function POST(request: NextRequest) {
         } catch (error: any) {
             console.error('❌ Error creando admin client:', error)
             console.error('  Mensaje:', error.message)
-            return NextResponse.json({ 
-                error: error.message || 'Error de configuración de Supabase. Verifique las variables de entorno.' 
+            return NextResponse.json({
+                error: error.message || 'Error de configuración de Supabase. Verifique las variables de entorno.'
             }, { status: 500 })
         }
-        
+
         // Usar adminClient para operaciones que requieren bypass de RLS
         // El cliente normal puede tener restricciones de permisos
-        
+
         const body = await request.json()
 
         if (process.env.NODE_ENV === 'development') {
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
 
         // Validaciones básicas
         if (!usuario_id || !email || !password || !tipo) {
-            return NextResponse.json({ 
+            return NextResponse.json({
                 error: 'Faltan campos requeridos',
                 detalles: {
                     usuario_id: !usuario_id ? 'Falta usuario_id' : 'OK',
@@ -118,8 +120,8 @@ export async function POST(request: NextRequest) {
         // Validar formato UUID
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
         if (!uuidRegex.test(usuario_id)) {
-            return NextResponse.json({ 
-                error: `usuario_id no tiene formato UUID válido: ${usuario_id}` 
+            return NextResponse.json({
+                error: `usuario_id no tiene formato UUID válido: ${usuario_id}`
             }, { status: 400 })
         }
 
@@ -132,8 +134,8 @@ export async function POST(request: NextRequest) {
         if (referencia_coordinador_id) {
             // Validar formato UUID
             if (!uuidRegex.test(referencia_coordinador_id)) {
-                return NextResponse.json({ 
-                    error: `referencia_coordinador_id no tiene formato UUID válido: ${referencia_coordinador_id}` 
+                return NextResponse.json({
+                    error: `referencia_coordinador_id no tiene formato UUID válido: ${referencia_coordinador_id}`
                 }, { status: 400 })
             }
 
@@ -145,8 +147,8 @@ export async function POST(request: NextRequest) {
                 .single()
 
             if (refError || !coordinadorRef) {
-                return NextResponse.json({ 
-                    error: `El coordinador de referencia no existe con ID: ${referencia_coordinador_id}` 
+                return NextResponse.json({
+                    error: `El coordinador de referencia no existe con ID: ${referencia_coordinador_id}`
                 }, { status: 400 })
             }
 
@@ -164,7 +166,7 @@ export async function POST(request: NextRequest) {
         if (process.env.NODE_ENV === 'development') {
             console.log('🔍 Buscando usuario con ID:', usuario_id)
         }
-        
+
         const { data: usuario, error: usuarioError } = await adminClient
             .from('usuarios')
             .select('id, nombres, apellidos, numero_documento, email')
@@ -176,15 +178,15 @@ export async function POST(request: NextRequest) {
             console.error('  Código:', usuarioError.code)
             console.error('  Mensaje:', usuarioError.message)
             console.error('  Detalles:', usuarioError.details)
-            return NextResponse.json({ 
-                error: `Usuario no encontrado: ${usuarioError.message}` 
+            return NextResponse.json({
+                error: `Usuario no encontrado: ${usuarioError.message}`
             }, { status: 404 })
         }
 
         if (!usuario) {
             console.error('❌ Usuario no encontrado con ID:', usuario_id)
-            return NextResponse.json({ 
-                error: `Usuario no encontrado con ID: ${usuario_id}` 
+            return NextResponse.json({
+                error: `Usuario no encontrado con ID: ${usuario_id}`
             }, { status: 404 })
         }
 
