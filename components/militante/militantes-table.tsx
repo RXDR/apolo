@@ -112,12 +112,7 @@ export function MilitantesTable() {
                                 <SelectItem value="suspendido">Suspendido</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button
-                            onClick={() => router.push("/dashboard/militante/nuevo")}
-                            className="bg-[#0F4C81] hover:bg-[#0F4C81]/90 text-white"
-                        >
-                            + Nuevo Militante
-                        </Button>
+                       
                     </div>
 
                     {/* Tabla */}
@@ -160,7 +155,7 @@ export function MilitantesTable() {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-sm">{militante.tipo}</td>
+                                                <td className="px-4 py-3 text-sm">{militante.tipo_descripcion || militante.tipo}</td>
                                                 <td className="px-4 py-3 text-sm">
                                                     {militante.coordinador_nombre || militante.coordinador_email || "-"}
                                                 </td>

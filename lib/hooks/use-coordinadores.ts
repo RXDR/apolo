@@ -246,6 +246,43 @@ export function useCoordinadores() {
         }
     }, [])
 
+    const buscarDirigentes = useCallback(async () => {
+        try {
+            setLoading(true)
+            setError(null)
+
+            // 1. Obtener el ID del perfil 'Dirigente'
+            const { data: perfilData, error: perfilError } = await supabase
+                .from('perfiles')
+                .select('id')
+                .eq('nombre', 'Dirigente')
+                .single()
+
+            if (perfilError || !perfilData) {
+                throw new Error("El perfil 'Dirigente' no fue encontrado.")
+            }
+
+            const dirigentePerfilId = perfilData.id
+
+            // 2. Buscar todos los coordinadores con ese perfil
+            const { data, error: queryError } = await supabase
+                .from('v_coordinadores_completo')
+                .select('coordinador_id, nombres, apellidos, perfil_id')
+                .eq('perfil_id', dirigentePerfilId)
+
+            if (queryError) throw queryError
+
+            return data || []
+        } catch (err) {
+            const error = err instanceof Error ? err : new Error('Error desconocido')
+            setError(error)
+            console.error('Error buscando dirigentes:', err)
+            return []
+        } finally {
+            setLoading(false)
+        }
+    }, [])
+
     return {
         listar,
         obtenerPorId,
@@ -254,6 +291,7 @@ export function useCoordinadores() {
         eliminar,
         cambiarEstado,
         buscarCoordinadores,
+        buscarDirigentes,
         loading,
         error,
     }

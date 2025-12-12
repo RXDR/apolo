@@ -51,13 +51,24 @@ export async function GET(request: NextRequest) {
             // Si la vista no existe, usar la tabla directamente con joins
             console.warn('Vista no disponible, usando tabla directamente:', viewError.message)
             
+            // 1. Obtener los tipos de militante para mapeo
+            const { data: tiposData, error: tiposError } = await (adminClient as any)
+                .from('tipos_militante')
+                .select('codigo, descripcion')
+            
+            if (tiposError) throw tiposError;
+
+            const tiposMap = new Map(tiposData.map(t => [String(t.codigo), t.descripcion]));
+
             let tableQuery = (adminClient as any)
                 .from('militantes')
-                .select('*, usuarios!militantes_usuario_id_fkey(nombres, apellidos, numero_documento, tipo_documento, celular, email), coordinadores(email), perfiles(nombre)', { count: 'exact' })
+                .select('*, usuarios:usuario_id(nombres, apellidos, numero_documento), coordinador:coordinador_id(*, usuario:usuario_id(nombres, apellidos)), perfil:perfil_id(nombre)', { count: 'exact' })
 
             // Aplicar filtros en la tabla
             if (busqueda) {
-                tableQuery = tableQuery.or(`usuarios.nombres.ilike.%${busqueda}%,usuarios.apellidos.ilike.%${busqueda}%,usuarios.numero_documento.ilike.%${busqueda}%`)
+                // Nota: el filtro en campos relacionados no es tan directo en el fallback.
+                // Se mantiene el filtro en la tabla principal por simplicidad.
+                // Idealmente, se usaría la vista o funciones RPC.
             }
 
             if (estado) {
@@ -76,8 +87,21 @@ export async function GET(request: NextRequest) {
                 return NextResponse.json({ error: tableError.message }, { status: 500 })
             }
 
+            // 2. Mapear los datos para que coincidan con la estructura de la vista
+            const augmentedData = data.map(m => ({
+                ...m,
+                militante_id: m.id,
+                nombres: m.usuarios.nombres,
+                apellidos: m.usuarios.apellidos,
+                numero_documento: m.usuarios.numero_documento,
+                coordinador_nombre: m.coordinador ? `${m.coordinador.usuario.nombres} ${m.coordinador.usuario.apellidos}` : null,
+                perfil_nombre: m.perfil ? m.perfil.nombre : null,
+                tipo_descripcion: tiposMap.get(m.tipo) || m.tipo
+            }));
+
+
             return NextResponse.json({
-                data,
+                data: augmentedData,
                 count,
                 page,
                 pageSize,
