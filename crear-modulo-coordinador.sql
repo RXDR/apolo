@@ -137,7 +137,7 @@ SELECT
     c.creado_en,
     c.actualizado_en
 FROM public.coordinadores c
-INNER JOIN public.usuarios u ON c.usuario_id = u.id
+LEFT JOIN public.usuarios u ON c.usuario_id = u.id
 LEFT JOIN public.perfiles p ON c.perfil_id = p.id
 LEFT JOIN public.ciudades ciudad ON u.ciudad_id = ciudad.id
 LEFT JOIN public.zonas zona ON u.zona_id = zona.id

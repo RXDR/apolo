@@ -22,11 +22,46 @@ export async function tienePermiso(
         })
 
         if (error) {
-            console.error('Error verificando permiso:', error)
-            return false
+            console.error('Error verificando permiso (rpc):', error)
+            // continuar con fallback
         }
 
-        return data || false
+        // Si la RPC indica que tiene permiso, devolver true
+        if (data) {
+            return data as unknown as boolean
+        }
+
+        // Fallback: revisar si existe un coordinador con ese usuario_id y verificar por perfil_id
+        try {
+            const { data: coord, error: coordErr } = await supabase
+                .from('coordinadores')
+                .select('perfil_id')
+                .eq('usuario_id', usuarioId)
+                .limit(1)
+                .single()
+
+            if (!coordErr && coord && (coord as any).perfil_id) {
+                const perfilId = (coord as any).perfil_id
+                const { data: rows, error: rowsErr } = await supabase
+                    .from('perfil_permiso_modulo')
+                    .select('modulos(nombre, activo), permisos(codigo)')
+                    .eq('perfil_id', perfilId)
+
+                if (rows && (rows as any[]).length > 0) {
+                    const found = (rows as any[]).some(
+                        (r) =>
+                            r.modulos?.nombre === moduloNombre &&
+                            r.permisos?.codigo === permisoCode &&
+                            r.modulos?.activo !== false
+                    )
+                    return found
+                }
+            }
+        } catch (e) {
+            console.warn('Error fallback de tienePermiso:', e)
+        }
+
+        return false
     } catch (error) {
         console.error('Error en tienePermiso:', error)
         return false
@@ -38,16 +73,55 @@ export async function tienePermiso(
  */
 export async function obtenerPermisosUsuario(usuarioId: string) {
     try {
+        // Intentar obtener permisos desde la función RPC (lo ideal)
         const { data, error } = await supabase.rpc('obtener_permisos_usuario', {
             p_usuario_id: usuarioId,
         })
 
         if (error) {
-            console.error('Error obteniendo permisos:', error)
-            return []
+            console.error('Error obteniendo permisos (rpc):', error)
         }
 
-        return data || []
+        if (data && (data as any[]).length > 0) {
+            return data as any[]
+        }
+
+        // Fallback: buscar si existe un coordinador con ese usuario_id y usar su perfil_id
+        try {
+            const { data: coord, error: coordErr } = await supabase
+                .from('coordinadores')
+                .select('perfil_id')
+                .eq('usuario_id', usuarioId)
+                .limit(1)
+                .single()
+
+            if (!coordErr && coord && (coord as any).perfil_id) {
+                const perfilId = (coord as any).perfil_id
+
+                // Obtener permisos a partir de perfil_permiso_modulo y mapear al mismo shape que la RPC
+                const { data: rows, error: rowsErr } = await supabase
+                    .from('perfil_permiso_modulo')
+                    .select('modulos(nombre, ruta, activo), permisos(codigo, nombre)')
+                    .eq('perfil_id', perfilId)
+
+                if (rows && (rows as any[]).length > 0) {
+                    const mapped = (rows as any[])
+                        .filter((r) => r.modulos?.activo !== false)
+                        .map((r) => ({
+                            modulo_nombre: r.modulos?.nombre || null,
+                            modulo_ruta: r.modulos?.ruta || null,
+                            permiso_codigo: r.permisos?.codigo || null,
+                            permiso_nombre: r.permisos?.nombre || null,
+                        }))
+
+                    return mapped
+                }
+            }
+        } catch (e) {
+            console.warn('Error en fallback de obtenerPermisosUsuario:', e)
+        }
+
+        return []
     } catch (error) {
         console.error('Error en obtenerPermisosUsuario:', error)
         return []
@@ -76,10 +150,53 @@ export async function obtenerUsuarioActual() {
 
         if (error) {
             console.error('Error obteniendo usuario:', error)
-            return null
+            // No throw: continuará intentando fallback
         }
 
-        return usuario
+        if (usuario) {
+            return usuario
+        }
+
+        // Fallback: Si no se encuentra en usuarios, verificar si el auth_user_id corresponde a un coordinador
+        try {
+            const { data: coord, error: coordErr } = await supabase
+                .from('coordinadores')
+                .select('usuario_id, perfil_id, email')
+                .eq('auth_user_id', session.user.id)
+                .single()
+
+            if (!coordErr && coord) {
+                // Intentar obtener la persona/usuario referenciado por coordinadores.usuario_id
+                try {
+                    const { data: usuarioById, error: usuarioByIdErr } = await supabase
+                        .from('usuarios')
+                        .select('*')
+                        .eq('id', (coord as any).usuario_id)
+                        .single()
+
+                    if (!usuarioByIdErr && usuarioById) {
+                        return usuarioById
+                    }
+
+                    // Si no existe usuario con ese id, devolver un objeto mínimo que permita verificar permisos
+                    return {
+                        id: (coord as any).usuario_id,
+                        nombres: null,
+                        apellidos: null,
+                        email: (coord as any).email || null,
+                        perfil_sugerido_id: (coord as any).perfil_id || null,
+                        is_coordinador: true,
+                    }
+                } catch (e) {
+                    console.warn('Error intentando obtener usuario desde coordinador:', e)
+                    return null
+                }
+            }
+        } catch (e) {
+            console.warn('Error verificando coordinadores para auth_user_id:', e)
+        }
+
+        return null
     } catch (error) {
         console.error('Error en obtenerUsuarioActual:', error)
         return null

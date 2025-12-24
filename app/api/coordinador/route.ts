@@ -43,6 +43,59 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
+        // Si no hay resultados en la vista, intentar fallback desde la tabla `coordinadores`
+        if ((!data || (Array.isArray(data) && data.length === 0)) && (!count || count === 0)) {
+            try {
+                // Hacemos un select con joins (LEFT) para incluir coordinadores aunque el usuario relacionado falte
+                let fallbackQuery = supabase
+                    .from('coordinadores')
+                    .select(`*, usuario:usuario_id(nombres,apellidos,numero_documento,tipo_documento,celular,email), perfil:perfil_id(nombre)`, { count: 'exact' })
+
+                if (estado) fallbackQuery = fallbackQuery.eq('estado', estado)
+                // Nota: el filtro de búsqueda es aproximado, hacemos el filtrado por email en la tabla y por usuario en memoria
+                if (busqueda) fallbackQuery = fallbackQuery.ilike('email', `%${busqueda}%`)
+
+                fallbackQuery = fallbackQuery.range(from, to).order('creado_en', { ascending: false })
+
+                const { data: fallbackData, error: fallbackError, count: fallbackCount } = await fallbackQuery
+
+                if (fallbackError) {
+                    console.error('Error en fallback listando coordinadores:', fallbackError)
+                    return NextResponse.json({ error: fallbackError.message }, { status: 500 })
+                }
+
+                const mapped = (fallbackData || []).map((r: any) => ({
+                    coordinador_id: r.id,
+                    email: r.email,
+                    estado: r.estado,
+                    usuario_id: r.usuario_id,
+                    nombres: r.usuario?.nombres || null,
+                    apellidos: r.usuario?.apellidos || null,
+                    numero_documento: r.usuario?.numero_documento || null,
+                    tipo_documento: r.usuario?.tipo_documento || null,
+                    celular: r.usuario?.celular || null,
+                    ciudad_nombre: null,
+                    zona_nombre: null,
+                    rol: r.perfil?.nombre || null,
+                    perfil_id: r.perfil_id,
+                    referencia_nombre: null,
+                    creado_en: r.creado_en,
+                    actualizado_en: r.actualizado_en,
+                }))
+
+                return NextResponse.json({
+                    data: mapped,
+                    count: fallbackCount || 0,
+                    page,
+                    pageSize,
+                    totalPages: Math.ceil(((fallbackCount || 0) / pageSize) || 0),
+                })
+            } catch (e) {
+                console.error('Error en fallback listando coordinadores:', e)
+                // Continuar y devolver el resultado original (vacío)
+            }
+        }
+
         return NextResponse.json({
             data,
             count,
@@ -202,6 +255,24 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
         }
 
+        // 2b. Verificar si ya existe un usuario en Auth con el mismo email (evitar intentar crear duplicados)
+        try {
+            const { data: authUsers, error: authUsersError } = await (adminClient as any)
+                .from('auth.users')
+                .select('id')
+                .eq('email', email)
+                .limit(1)
+
+            if (authUsersError) {
+                // Logueamos la advertencia pero no bloqueamos la operación; el siguiente createUser manejará cualquier conflicto
+                console.warn('Advertencia al verificar auth.users:', authUsersError)
+            } else if (authUsers && (Array.isArray(authUsers) ? authUsers.length > 0 : !!authUsers)) {
+                return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
+            }
+        } catch (err) {
+            console.warn('Error inesperado al verificar auth.users:', err)
+        }
+
         // 3. Crear usuario en Auth usando adminClient (requiere SERVICE_ROLE_KEY)
         if (process.env.NODE_ENV === 'development') {
             console.log('🔧 Creando usuario en Supabase Auth con adminClient...')
@@ -214,7 +285,13 @@ export async function POST(request: NextRequest) {
 
         if (authError) {
             console.error('❌ Error creando usuario en Auth:', authError)
-            return NextResponse.json({ error: `Error creando usuario: ${authError.message}` }, { status: 500 })
+            // Mapear errores de duplicado a un mensaje amigable y status 400
+            const errMsg = (authError.message || '').toLowerCase()
+            if (errMsg.includes('already') || errMsg.includes('already been registered') || errMsg.includes('duplicate')) {
+                return NextResponse.json({ error: 'El email ya está registrado' }, { status: 400 })
+            }
+            // Para otros errores devolver mensaje genérico (no exponer mensajes internos en inglés)
+            return NextResponse.json({ error: 'Error creando usuario en Auth' }, { status: 500 })
         }
 
         if (process.env.NODE_ENV === 'development') {
@@ -230,6 +307,8 @@ export async function POST(request: NextRequest) {
             .insert({
                 usuario_id,
                 email,
+                // Guardar la contraseña en la columna `password` (se solicitó conservar la contraseña en la tabla coordinadores)
+                password,
                 auth_user_id: authData.user.id,
                 perfil_id,
                 referencia_coordinador_id,
@@ -256,6 +335,8 @@ export async function POST(request: NextRequest) {
             console.log('✅ Coordinador creado exitosamente con ID:', (coordinador as any)?.id)
         }
 
+        // Nota: En sistemas de prueba devolvemos la contraseña en la respuesta tal como fue almacenada.
+         
         // 5. Asignar perfil al usuario si se proporcionó (usando adminClient)
         if (perfil_id) {
             const { error: perfilError } = await (adminClient as any).from('usuario_perfil').insert({

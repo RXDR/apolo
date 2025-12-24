@@ -112,6 +112,29 @@ export function DatosPersonalesSection({ form }: DatosPersonalesSectionProps) {
 
             <FormField
                 control={form.control}
+                name="estado"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Estado</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || "activo"}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccione estado" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="activo">Activo</SelectItem>
+                                <SelectItem value="inactivo">Inactivo</SelectItem>
+                                <SelectItem value="suspendido">Suspendido</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+            <FormField
+                control={form.control}
                 name="genero"
                 render={({ field }) => (
                     <FormItem>

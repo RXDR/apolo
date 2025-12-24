@@ -4,12 +4,17 @@ import { CiudadesManager } from "@/components/configuracion/lugares/ciudades-man
 import { BarriosManager } from "@/components/configuracion/lugares/barrios-manager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MapPin, Building2, Users } from "lucide-react";
-import { getCiudades, getBarrios } from "@/lib/actions/configuracion";
+import { Settings, MapPin, Building2, Users, Trees, Link } from "lucide-react";
+import { getCiudades, getBarrios, getGrupoEtnicos, getReferencias, getcompromiso } from "@/lib/actions/configuracion";
+import { GrupoEtnicoManager } from "@/components/configuracion/grupo-etnico-manager";
+import { ReferenciasCompromisosManager } from "@/components/configuracion/referencias-compromisos-manager";
 
 export default async function ConfiguracionPage() {
     const ciudades = await getCiudades()
     const barrios = await getBarrios()
+    const grupos = await getGrupoEtnicos()
+    const referencias = await getReferencias()
+    const compromisos = await getcompromiso()
 
     return (
         <DashboardLayout>
@@ -32,6 +37,14 @@ export default async function ConfiguracionPage() {
                         <TabsTrigger value="barrios" className="flex items-center gap-2">
                             <Building2 className="h-4 w-4" />
                             Barrios
+                        </TabsTrigger>
+                        <TabsTrigger value="grupos" className="flex items-center gap-2">
+                            <Trees className="h-4 w-4" />
+                            Grupos Étnicos
+                        </TabsTrigger>
+                        <TabsTrigger value="referencias" className="flex items-center gap-2">
+                            <Link className="h-4 w-4" />
+                            Referencias & Compromisos
                         </TabsTrigger>
                     </TabsList>
 
@@ -73,6 +86,34 @@ export default async function ConfiguracionPage() {
                             </CardHeader>
                             <CardContent>
                                 <BarriosManager initialBarrios={barrios} ciudades={ciudades} />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="grupos">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Grupos Étnicos</CardTitle>
+                                <CardDescription>
+                                    Registrar y administrar grupos étnicos.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <GrupoEtnicoManager initialGrupos={grupos} />
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="referencias">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Referencias y Compromisos</CardTitle>
+                                <CardDescription>
+                                    Agregar o administrar referencias y compromisos.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <ReferenciasCompromisosManager initialReferencias={referencias} initialCompromisos={compromisos} ciudades={ciudades} />
                             </CardContent>
                         </Card>
                     </TabsContent>

@@ -45,6 +45,7 @@ interface ActualizarCoordinadorData {
     referencia_coordinador_id?: string
     estado?: string
     tipo?: 'Coordinador' | 'Estructurador'
+    password?: string
 }
 
 export function useCoordinadores() {
@@ -108,14 +109,23 @@ export function useCoordinadores() {
             setLoading(true)
             setError(null)
 
-            const { data, error: queryError } = await supabase
-                .from('v_coordinadores_completo')
-                .select('*')
-                .eq('coordinador_id', id)
-                .single()
+            // Normalize id (strip quotes, trim)
+            let normalizedId = Array.isArray(id) ? id[0] : id
+            normalizedId = typeof normalizedId === 'string' ? normalizedId.trim().replace(/^"|"$/g, '') : String(normalizedId || '')
 
-            if (queryError) throw queryError
+            // Validar id
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            if (!normalizedId || !uuidRegex.test(normalizedId)) {
+                throw new Error(`ID no tiene formato UUID válido: ${id}`)
+            }
 
+            const response = await fetch(`/api/coordinador/${normalizedId}`)
+            if (!response.ok) {
+                const errData = await response.json()
+                throw new Error(errData.error || 'Error al obtener coordinador')
+            }
+
+            const data = await response.json()
             return data as Coordinador
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Error desconocido')
@@ -160,15 +170,20 @@ export function useCoordinadores() {
             setLoading(true)
             setError(null)
 
-            const { data, error: updateError } = await supabase
-                .from('coordinadores')
-                .update(coordinadorData)
-                .eq('id', id)
-                .select()
-                .single()
+            const response = await fetch(`/api/coordinador/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(coordinadorData),
+            })
 
-            if (updateError) throw updateError
+            if (!response.ok) {
+                const errData = await response.json()
+                throw new Error(errData.error || 'Error al actualizar coordinador')
+            }
 
+            const data = await response.json()
             return data
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Error desconocido')
@@ -203,7 +218,7 @@ export function useCoordinadores() {
             setLoading(true)
             setError(null)
 
-            const { data, error: updateError } = await supabase
+            const { data, error: updateError } = await (supabase as any)
                 .from('coordinadores')
                 .update({ estado: nuevoEstado })
                 .eq('id', id)
@@ -262,7 +277,7 @@ export function useCoordinadores() {
                 throw new Error("El perfil 'Dirigente' no fue encontrado.")
             }
 
-            const dirigentePerfilId = perfilData.id
+            const dirigentePerfilId = (perfilData as any).id
 
             // 2. Buscar todos los coordinadores con ese perfil
             const { data, error: queryError } = await supabase

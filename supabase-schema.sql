@@ -209,6 +209,7 @@ create table public.usuarios (
   linkedin character varying(255) null,
   tiktok character varying(255) null,
   tipo_referencia_id uuid null,
+  grupo_etnico uuid null,
   constraint usuarios_pkey primary key (id),
   constraint usuarios_numero_documento_key unique (numero_documento),
   constraint usuarios_email_key unique (email),
@@ -271,7 +272,7 @@ create index IF not exists idx_usuarios_auth_user on public.usuarios using btree
 
 create trigger trigger_actualizar_usuarios BEFORE
 update on usuarios for EACH row
-execute FUNCTION actualizar_timestamp ();
+execute FUNCTION actualizar_timestamp (); 
 -- =====================================================
 -- Tabla: coordinadores
 -- =====================================================
@@ -283,6 +284,7 @@ CREATE TABLE IF NOT EXISTS public.coordinadores (
     
     -- Credenciales de acceso
     email VARCHAR(255) NOT NULL UNIQUE,
+    password TEXT NULL,
     
     -- Relación con usuario de autenticación creado
     auth_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
@@ -522,6 +524,7 @@ CREATE OR REPLACE FUNCTION public.tiene_permiso(
 DECLARE
     v_tiene_permiso BOOLEAN;
 BEGIN
+    -- Verificar en usuario_perfil
     SELECT EXISTS (
         SELECT 1
         FROM public.usuario_perfil up
@@ -534,12 +537,30 @@ BEGIN
         AND pm.codigo = p_permiso_codigo
         AND m.activo = true
     ) INTO v_tiene_permiso;
-    
+
+    IF v_tiene_permiso THEN
+        RETURN true;
+    END IF;
+
+    -- Fallback: verificar si existe un coordinador con ese usuario_id y su perfil_id otorga el permiso
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.coordinadores c
+        JOIN public.perfil_permiso_modulo ppm ON c.perfil_id = ppm.perfil_id
+        JOIN public.modulos m ON ppm.modulo_id = m.id
+        JOIN public.permisos pm ON ppm.permiso_id = pm.id
+        WHERE c.usuario_id = p_usuario_id
+        AND c.perfil_id IS NOT NULL
+        AND m.nombre = p_modulo_nombre
+        AND pm.codigo = p_permiso_codigo
+        AND m.activo = true
+    ) INTO v_tiene_permiso;
+
     RETURN v_tiene_permiso;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-COMMENT ON FUNCTION public.tiene_permiso IS 'Verifica si un usuario tiene un permiso específico en un módulo';
+COMMENT ON FUNCTION public.tiene_permiso IS 'Verifica si un usuario tiene un permiso específico en un módulo (con fallback a coordinadores.perfil_id)';
 
 -- Función para obtener permisos de usuario
 CREATE OR REPLACE FUNCTION public.obtener_permisos_usuario(p_usuario_id UUID)
@@ -550,24 +571,45 @@ RETURNS TABLE (
     permiso_nombre VARCHAR
 ) AS $$
 BEGIN
-    RETURN QUERY
-    SELECT 
-        m.nombre as modulo_nombre,
-        m.ruta as modulo_ruta,
-        pm.codigo as permiso_codigo,
-        pm.nombre as permiso_nombre
-    FROM public.usuario_perfil up
-    JOIN public.perfil_permiso_modulo ppm ON up.perfil_id = ppm.perfil_id
-    JOIN public.modulos m ON ppm.modulo_id = m.id
-    JOIN public.permisos pm ON ppm.permiso_id = pm.id
-    WHERE up.usuario_id = p_usuario_id
-    AND up.activo = true
-    AND m.activo = true
-    ORDER BY m.orden, pm.codigo;
+    -- Si el usuario tiene asignaciones en usuario_perfil, usar esas
+    IF EXISTS (
+        SELECT 1 FROM public.usuario_perfil up WHERE up.usuario_id = p_usuario_id AND up.activo = true
+    ) THEN
+        RETURN QUERY
+        SELECT 
+            m.nombre as modulo_nombre,
+            m.ruta as modulo_ruta,
+            pm.codigo as permiso_codigo,
+            pm.nombre as permiso_nombre
+        FROM public.usuario_perfil up
+        JOIN public.perfil_permiso_modulo ppm ON up.perfil_id = ppm.perfil_id
+        JOIN public.modulos m ON ppm.modulo_id = m.id
+        JOIN public.permisos pm ON ppm.permiso_id = pm.id
+        WHERE up.usuario_id = p_usuario_id
+        AND up.activo = true
+        AND m.activo = true
+        ORDER BY m.orden, pm.codigo;
+    ELSE
+        -- Fallback: buscar si existe un coordinador con ese usuario_id y usar su perfil_id
+        RETURN QUERY
+        SELECT
+            m.nombre as modulo_nombre,
+            m.ruta as modulo_ruta,
+            pm.codigo as permiso_codigo,
+            pm.nombre as permiso_nombre
+        FROM public.coordinadores c
+        JOIN public.perfil_permiso_modulo ppm ON c.perfil_id = ppm.perfil_id
+        JOIN public.modulos m ON ppm.modulo_id = m.id
+        JOIN public.permisos pm ON ppm.permiso_id = pm.id
+        WHERE c.usuario_id = p_usuario_id
+        AND c.perfil_id IS NOT NULL
+        AND m.activo = true
+        ORDER BY m.orden, pm.codigo;
+    END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-COMMENT ON FUNCTION public.obtener_permisos_usuario IS 'Obtiene todos los permisos de un usuario';
+COMMENT ON FUNCTION public.obtener_permisos_usuario IS 'Obtiene todos los permisos de un usuario (con fallback a coordinadores.perfil_id si no hay registros en usuario_perfil)';
 
 -- =====================================================
 -- 5. ROW LEVEL SECURITY (RLS)
@@ -1009,7 +1051,7 @@ SELECT
     c.creado_en,
     c.actualizado_en
 FROM public.coordinadores c
-INNER JOIN public.usuarios u ON c.usuario_id = u.id
+LEFT JOIN public.usuarios u ON c.usuario_id = u.id
 LEFT JOIN public.perfiles p ON c.perfil_id = p.id
 LEFT JOIN public.ciudades ciudad ON u.ciudad_id = ciudad.id
 LEFT JOIN public.zonas zona ON u.zona_id = zona.id
@@ -1067,3 +1109,34 @@ BEGIN
     RAISE NOTICE '📝 Datos iniciales insertados';
     RAISE NOTICE '🎯 Sistema listo para usar';
 END $$;
+-------referencia tabla ----------------
+create table public.referencia (
+  id uuid not null default gen_random_uuid (),
+  created_at timestamp with time zone not null default now(),
+  nombre text null,
+  telefono text null,
+  ciudad uuid null,
+  constraint referencia_pkey primary key (id)
+) TABLESPACE pg_default;
+---------grupo_etnico tabla -------------
+create table public.grupo_etnico (
+  id bigint generated by default as identity not null,
+  created_at timestamp with time zone not null default now(),
+  nombre text null,
+  constraint grupo_etnico_pkey primary key (id)
+) TABLESPACE pg_default;
+----dirigentes tabla ----------------------
+create table public.dirigentes (
+  id bigint generated by default as identity not null,
+  created_at timestamp with time zone not null default now(),
+  id_dirigente text null,
+  id_coordinador text null,
+  constraint dirigentes_pkey primary key (id)
+) TABLESPACE pg_default;
+-----compromisos tabla --------------------
+create table public.compromisos (
+  id bigint generated by default as identity not null,
+  created_at timestamp with time zone not null default now(),
+  nombre text null,
+  constraint compromisos_pkey primary key (id)
+) TABLESPACE pg_default;

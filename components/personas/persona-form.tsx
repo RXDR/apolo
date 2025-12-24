@@ -64,7 +64,7 @@ const personaSchema = z.object({
   tiktok: z.string().optional(),
 
   // Referencias
-  referido_por: z.string().optional(),
+  referencia_id: z.string().optional(),
   tipo_referencia_id: z.string().optional(),
   lider_responsable: z.string().optional(),
 
@@ -72,8 +72,10 @@ const personaSchema = z.object({
   compromiso_cautivo: z.coerce.number().min(0).default(0),
   compromiso_impacto: z.coerce.number().min(0).default(0),
   compromiso_marketing: z.coerce.number().min(0).default(0),
-  compromiso_privado: z.string().optional(),
+  compromiso_id: z.string().optional(),
   observaciones: z.string().optional(),
+  // Estado
+  estado: z.enum(['activo', 'inactivo', 'suspendido']).optional(),
 })
 
 type PersonaFormValues = z.infer<typeof personaSchema>
@@ -111,6 +113,8 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
       compromiso_cautivo: 0,
       compromiso_impacto: 0,
       compromiso_marketing: 0,
+      compromiso_id: "",
+      estado: "activo",
     },
   })
 
@@ -144,7 +148,7 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
         await crear({
           ...personaData,
           creado_por: usuarioActual?.id,
-          estado: "activo",
+          estado: data.estado || 'activo',
         } as any)
         toast.success("Persona creada correctamente")
       }

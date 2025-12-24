@@ -121,29 +121,7 @@ export function DatosDemograficosSection({ form }: DatosDemograficosSectionProps
                 )}
             />
 
-            <FormField
-                control={form.control}
-                name="ingresos_rango"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Rango de Ingresos</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ""}>
-                            <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Seleccione rango" />
-                                </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                <SelectItem value="Menos de 1 SMMLV">Menos de 1 SMMLV</SelectItem>
-                                <SelectItem value="1 - 2 SMMLV">1 - 2 SMMLV</SelectItem>
-                                <SelectItem value="2 - 4 SMMLV">2 - 4 SMMLV</SelectItem>
-                                <SelectItem value="Más de 4 SMMLV">Más de 4 SMMLV</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
+           
 
             <div className="flex flex-col gap-4">
                 <FormField

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, Save, X, UserCheck, Key, User, Tag } from "lucide-react"
+import { Loader2, Save, X, UserCheck, Key, User, Tag, Eye, EyeOff } from "lucide-react"
 import { useCoordinadores } from "@/lib/hooks/use-coordinadores"
 import { usePersonas } from "@/lib/hooks/use-personas"
 import { toast } from "sonner"
@@ -31,24 +31,20 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Check, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase/client"
-
-// Esquema de validación
-const coordinadorSchema = z.object({
-    usuario_id: z.string().min(1, "Debe seleccionar una persona"),
-    email: z.string().email("Email inválido").min(1, "El email es requerido"),
-    password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-    perfil_id: z.string().optional(),
-    referencia_coordinador_id: z.string().optional(),
-    tipo: z.enum(["Coordinador", "Estructurador"], {
-        required_error: "Debe seleccionar un tipo (Coordinador o Estructurador)",
-    }),
-})
-
-type CoordinadorFormValues = z.infer<typeof coordinadorSchema>
+import { usePermisos } from "@/lib/hooks/use-permisos"
 
 interface CoordinadorFormProps {
     initialData?: any
     isEditing?: boolean
+}
+
+interface CoordinadorFormValues {
+    usuario_id: string
+    email: string
+    password?: string
+    perfil_id?: string
+    referencia_coordinador_id?: string
+    tipo: 'Coordinador' | 'Estructurador'
 }
 
 export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorFormProps) {
@@ -70,6 +66,20 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
 
     const [perfiles, setPerfiles] = useState<any[]>([])
 
+    // Esquema dinámico según si estamos editando
+    const coordinadorSchema = z.object({
+        usuario_id: z.string().min(1, "Debe seleccionar una persona"),
+        email: z.string().email("Email inválido").min(1, "El email es requerido"),
+        password: isEditing
+            ? z.preprocess((val) => (val === '' ? undefined : val), z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional())
+            : z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+        perfil_id: z.string().optional(),
+        referencia_coordinador_id: z.string().optional(),
+        tipo: z.enum(["Coordinador", "Estructurador"], {
+            required_error: "Debe seleccionar un tipo (Coordinador o Estructurador)",
+        }),
+    })
+
     const {
         register,
         handleSubmit,
@@ -77,6 +87,8 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
         setValue,
         watch,
         reset,
+        getValues,
+        setError,
     } = useForm<CoordinadorFormValues>({
         resolver: zodResolver(coordinadorSchema),
         defaultValues: initialData || {
@@ -88,6 +100,61 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
             tipo: "Coordinador",
         },
     })
+
+    const { permisos } = usePermisos("Módulo Coordinador")
+    const [authUserId, setAuthUserId] = useState<string | null>(initialData?.auth_user_id || null)
+    const [creatingAuthUser, setCreatingAuthUser] = useState(false)
+
+    // Mostrar / ocultar contraseña en el input
+    const [showPassword, setShowPassword] = useState(false)
+
+    // Si `initialData` cambia (llega desde la API), resetear los valores del formulario
+    useEffect(() => {
+        if (initialData) {
+            // Asegura que el campo password se resetea si viene desde la API
+            reset({
+                usuario_id: initialData.usuario_id || '',
+                email: initialData.email || '',
+                password: initialData.password || '',
+                perfil_id: initialData.perfil_id || '',
+                referencia_coordinador_id: initialData.referencia_coordinador_id || '',
+                tipo: initialData.tipo || 'Coordinador',
+            })
+            setAuthUserId(initialData.auth_user_id || null)
+        }
+    }, [initialData, reset])
+
+    async function handleToggleShowPassword() {
+        // Mostrar u ocultar contraseña (sin restricción de permisos en frontend)
+        const currentPassword = getValues('password')
+        if ((!currentPassword || currentPassword === '') && isEditing && initialData?.coordinador_id) {
+            // Validar el formato del coordinador_id antes de llamar a la API
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+            // Sanitizar coordinador_id
+            const rawId = initialData.coordinador_id
+            const sanitizedId = typeof rawId === 'string' ? rawId.trim().replace(/^"|"$/g, '') : String(rawId || '')
+            if (!uuidRegex.test(sanitizedId)) {
+                console.warn('Coordinador ID inválido, omitiendo petición de contraseña:', initialData.coordinador_id)
+            } else {
+                // Intentar obtener la contraseña del servidor (si no viene pre-cargada)
+                try {
+                    const res = await fetch(`/api/coordinador/${sanitizedId}`)
+                    if (res.ok) {
+                        const data = await res.json()
+                        if (data.password) {
+                            setValue('password', data.password)
+                        }
+                    } else if (res.status === 403) {
+                        toast.error('No autorizado para ver la contraseña')
+                    }
+                } catch (e) {
+                    console.warn('No se pudo obtener la contraseña desde el servidor:', e)
+                }
+            }
+        }
+
+        setShowPassword(prev => !prev)
+    }
 
     const usuario_id = watch("usuario_id")
     const referencia_coordinador_id = watch("referencia_coordinador_id")
@@ -140,18 +207,32 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
     useEffect(() => {
         async function cargarReferenciaInicial() {
             if (initialData?.referencia_coordinador_id && referencias.length === 0) {
-                // Si es edición y hay referencia, cargar sus datos básicos para mostrar en el combo
-                // Nota: Aquí asumimos que referencia_coordinador_id apunta a un coordinador, 
-                // pero necesitamos mostrar datos de persona. 
-                // Si el backend devuelve referencia_nombre, lo usamos.
+                // Si es edición y hay referencia, intentar cargar sus datos básicos para mostrar en el combo
                 if (initialData.referencia_nombre) {
-                    // Simular objeto persona para el combo
                     setReferencias([{
-                        id: initialData.referencia_coordinador_id, // Ojo: esto podría necesitar ajuste si el ID es de coordinador o persona
-                        nombres: initialData.referencia_nombre.split(' ')[0],
-                        apellidos: initialData.referencia_nombre.split(' ').slice(1).join(' '),
+                        id: initialData.referencia_coordinador_id,
+                        nombres: (initialData.referencia_nombre || '').split(' ')[0] || '',
+                        apellidos: (initialData.referencia_nombre || '').split(' ').slice(1).join(' ') || '',
                         numero_documento: ''
                     }])
+                    return
+                }
+
+                // Si no tenemos referencia_nombre, consultar la API del coordinador y usar los datos del usuario asociado
+                try {
+                    const refId = initialData.referencia_coordinador_id
+                    const res = await fetch(`/api/coordinador/${refId}`)
+                    if (res.ok) {
+                        const data = await res.json()
+                        const nombre = data.nombres || data.referencia_nombre || ''
+                        const partes = (nombre || '').split(' ')
+                        const nombres = partes[0] || ''
+                        const apellidos = partes.slice(1).join(' ') || ''
+                        setReferencias([{ id: refId, nombres, apellidos, numero_documento: data.numero_documento || '' }])
+                        return
+                    }
+                } catch (e) {
+                    console.warn('No se pudo cargar referencia inicial desde API:', e)
                 }
             }
         }
@@ -162,41 +243,47 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
         try {
             setSubmitting(true)
 
-            // Si se seleccionó una referencia que es una persona pero no es coordinador,
-            // el backend debería manejarlo o deberíamos crear el coordinador primero.
-            // Por ahora asumimos que el ID de referencia es válido para el campo referencia_coordinador_id
-            // OJO: Si la referencia debe ser un coordinador existente, la búsqueda debería ser sobre coordinadores.
-            // El usuario pidió "que busque en la tabla persona", lo cual implica que cualquier persona puede ser referencia.
-            // Pero la FK referencia_coordinador_id suele apuntar a la tabla coordinadores.
-            // Si la tabla permite null o apunta a coordinadores, hay que tener cuidado.
-            // Si la referencia DEBE ser un coordinador ya registrado, entonces la búsqueda debe ser sobre coordinadores (como estaba antes).
-            // Si el usuario dice "busque en la tabla persona", quizás quiere que al seleccionar una persona, 
-            // si no es coordinador, se convierta en uno? O simplemente que la referencia sea a la tabla personas?
-            // Dado el esquema actual (referencia_coordinador_id references coordinadores), 
-            // solo podemos referenciar a alguien que YA ES coordinador.
-            // Si el usuario insiste en buscar en personas, hay una discrepancia con el modelo de datos.
-            // Voy a mantener la búsqueda en coordinadores para la referencia para evitar errores de FK,
-            // pero cambiaré la etiqueta y visualización como pidió.
-
-            // CORRECCIÓN: El usuario dijo "en referencia que busque en la tabla persona".
-            // Si la FK es a coordinadores, esto dará error si la persona no es coordinador.
-            // Voy a asumir que el usuario sabe lo que hace y quiere buscar personas.
-            // Si selecciona una persona que NO es coordinador, el backend fallará por FK.
-            // Para evitar esto, voy a buscar COORDINADORES pero mostrando datos de persona.
-            // O mejor, voy a usar el hook buscarCoordinadores que ya busca por nombre de persona pero devuelve IDs de coordinador.
-
             if (isEditing && initialData?.coordinador_id) {
-                await actualizar(initialData.coordinador_id, {
+                const updatePayload: any = {
                     perfil_id: data.perfil_id,
                     referencia_coordinador_id: data.referencia_coordinador_id,
                     tipo: data.tipo,
-                })
+                }
+
+                if (data.password && data.password.trim() !== '') {
+                    // Verificar permiso antes de permitir cambio de contraseña
+                    if (!permisos?.administrar) {
+                        setError('password', { type: 'manual', message: 'No tienes permisos para cambiar la contraseña' })
+                        setSubmitting(false)
+                        return
+                    }
+                    updatePayload.password = data.password
+                }
+
+                const result: any = await actualizar(initialData.coordinador_id, updatePayload)
                 toast.success("Coordinador actualizado exitosamente")
+                // Mostrar detalles si la API reportó acciones en Auth
+                if (result?._auth_action) {
+                    const a = result._auth_action as { action: string; auth_user_id?: string }
+                    if (a.action === 'created') {
+                        toast.success('Se creó un usuario de autenticación y se vinculó al coordinador')
+                        setAuthUserId(a.auth_user_id || null)
+                    } else if (a.action === 'linked') {
+                        toast.success('Se vinculó el coordinador con un usuario de Auth existente')
+                        setAuthUserId(a.auth_user_id || null)
+                    } else if (a.action === 'updated') {
+                        toast.success('Se actualizó la contraseña en Auth')
+                    }
+                }
+
+                router.push("/dashboard/coordinador")
             } else {
                 // IMPORTANTE: referencia_coordinador_id debe ser un ID de coordinador existente
                 // Si no se proporciona, debe ser undefined/null, NO usar usuario_id
                 const payload = {
                     ...data,
+                    // La contraseña es requerida en creación según el esquema
+                    password: data.password as string,
                     // Solo incluir referencia_coordinador_id si se proporcionó explícitamente
                     referencia_coordinador_id: data.referencia_coordinador_id || undefined
                 }
@@ -204,10 +291,16 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
                 toast.success("Coordinador creado exitosamente")
             }
 
-            router.push("/dashboard/coordinador")
         } catch (error) {
             console.error("Error guardando coordinador:", error)
-            toast.error(error instanceof Error ? error.message : "Error al guardar coordinador")
+            const message = error instanceof Error ? error.message : "Error al guardar coordinador"
+            // Si es un error de email duplicado, mostrarlo en el campo y evitar el mensaje en inglés
+            if (message.includes('El email ya está registrado') || message.toLowerCase().includes('already')) {
+                setError('email', { type: 'manual', message: 'El email ya está registrado' })
+                toast.error('El email ya está registrado')
+            } else {
+                toast.error(message)
+            }
         } finally {
             setSubmitting(false)
         }
@@ -215,10 +308,40 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
 
     const personaSeleccionada = personas.find(p => p.id === usuario_id)
 
+    const personaDisplayName = (() => {
+        if (!usuario_id) return 'Buscar persona...'
+        const p = personaSeleccionada
+        if (p) return `${p.nombres || ''} ${p.apellidos || ''}`.trim() || 'Persona seleccionada'
+        const n = initialData?.nombres || ''
+        const a = initialData?.apellidos || ''
+        const full = `${n} ${a}`.trim()
+        return full || 'Persona seleccionada'
+    })()
+
     // Para referencia, necesitamos buscar en la lista de coordinadores cargados
     // Pero como cambiamos a buscar en personas, esto es complejo.
     // Voy a usar un estado separado para el nombre de la referencia seleccionada
     const [referenciaSeleccionadaNombre, setReferenciaSeleccionadaNombre] = useState("")
+
+    async function handleCreateAuth() {
+        if (!initialData?.coordinador_id) return
+        setCreatingAuthUser(true)
+        try {
+            const res = await fetch(`/api/coordinador/${initialData.coordinador_id}/create-auth`, { method: 'POST' })
+            const data = await res.json()
+            if (!res.ok) {
+                toast.error(data.error || 'Error creando usuario en Auth')
+            } else {
+                toast.success('Usuario de Auth creado/vinculado correctamente')
+                setAuthUserId(data?.auth_user_id || data?.id || null)
+            }
+        } catch (e) {
+            console.error('Error creando usuario en Auth:', e)
+            toast.error('Error creando usuario en Auth')
+        } finally {
+            setCreatingAuthUser(false)
+        }
+    }
 
     return (
         <form onSubmit={handleSubmit(onSubmit)}>
@@ -231,6 +354,27 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
                     <CardDescription>
                         Seleccione el nombre de la lista de coordinadores, si desea agregar un coordinador nuevo a la lista debe agregarlo primero a la base de datos de Personas
                     </CardDescription>
+                    {initialData?.incomplete && (
+                        <div className="mt-4 p-3 rounded border border-yellow-200 bg-yellow-50 text-yellow-900 text-sm">
+                            Este registro parece estar incompleto: el usuario asociado no fue encontrado en la tabla <code>usuarios</code>. Puede completar la información manualmente o asociar un usuario válido.
+                        </div>
+                    )}
+                    {initialData?.coordinador_id && (
+                        <div className="mt-3 text-sm text-muted-foreground">
+                            {authUserId ? (
+                                <div>Usuario de Auth vinculado: <span className="font-medium">{authUserId}</span></div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <div>No hay usuario de Auth vinculado.</div>
+                                    {permisos?.administrar && (
+                                        <Button size="sm" variant="outline" onClick={handleCreateAuth} disabled={creatingAuthUser}>
+                                            {creatingAuthUser ? 'Creando...' : 'Crear usuario en Auth'}
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent className="px-0 space-y-8">
 
@@ -249,9 +393,7 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
                                             className="w-full justify-between border-x-0 border-t-0 border-b rounded-none px-0 hover:bg-transparent shadow-none"
                                         >
                                             <span className={cn("text-base", !usuario_id && "text-muted-foreground")}>
-                                                {usuario_id
-                                                    ? (personas.find(p => p.id === usuario_id)?.nombres + ' ' + personas.find(p => p.id === usuario_id)?.apellidos || "Persona seleccionada")
-                                                    : "Buscar persona..."}
+                                                {personaDisplayName}
                                             </span>
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
@@ -365,14 +507,20 @@ export function CoordinadorForm({ initialData, isEditing = false }: CoordinadorF
                                     <Key className="h-5 w-5" />
                                     <Label htmlFor="password" className="text-muted-foreground font-normal">Contraseña</Label>
                                 </div>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder={isEditing ? "Dejar en blanco para mantener actual" : ""}
-                                    {...register("password")}
-                                    className="border-x-0 border-t-0 border-b rounded-none px-0 focus-visible:ring-0 shadow-none"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        placeholder={isEditing ? "Dejar en blanco para mantener actual" : ""}
+                                        {...register("password")}
+                                        className="border-x-0 border-t-0 border-b rounded-none px-0 focus-visible:ring-0 shadow-none pr-10"
+                                    />
+                                    <button type="button" onClick={handleToggleShowPassword} aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </button>
+                                </div>
                                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+                                {/* Se permite ver y cambiar la contraseña desde el frontend */}
                             </div>
                         </div>
                     </div>

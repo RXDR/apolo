@@ -43,6 +43,19 @@ interface ReferenciasSectionProps {
 export function ReferenciasSection({ form }: ReferenciasSectionProps) {
     const { tiposReferencia } = useCatalogos()
     const { buscarReferentes } = usePersonas()
+    const [referencias, setReferencias] = useState<any[]>([])
+    const [loadingReferencias, setLoadingReferencias] = useState(false)
+    // Cargar referencias desde la tabla referencia
+    useEffect(() => {
+        let mounted = true
+        setLoadingReferencias(true)
+        fetch('/api/referencia')
+            .then(r => r.json())
+            .then(d => { if (mounted) setReferencias(d || []) })
+            .catch(() => { /* ignore */ })
+            .finally(() => { if (mounted) setLoadingReferencias(false) })
+        return () => { mounted = false }
+    }, [])
     const [open, setOpen] = useState(false)
     const [referentes, setReferentes] = useState<any[]>([])
     const [loadingReferentes, setLoadingReferentes] = useState(false)
@@ -68,81 +81,28 @@ export function ReferenciasSection({ form }: ReferenciasSectionProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
                 control={form.control}
-                name="referido_por"
+                name="referencia_id"
                 render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                        <FormLabel>Referido Por (Buscar Persona)</FormLabel>
-                        <Popover open={open} onOpenChange={setOpen}>
-                            <PopoverTrigger asChild>
-                                <FormControl>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        aria-expanded={open}
-                                        className={cn(
-                                            "w-full justify-between",
-                                            !field.value && "text-muted-foreground"
-                                        )}
-                                    >
-                                        {field.value
-                                            ? field.value
-                                            : "Buscar por nombre o documento..."}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0">
-                                <Command shouldFilter={false}>
-                                    <CommandInput
-                                        placeholder="Escriba nombre o documento..."
-                                        onValueChange={setSearchTerm}
-                                    />
-                                    <CommandList>
-                                        {loadingReferentes && (
-                                            <div className="py-6 text-center text-sm text-muted-foreground flex items-center justify-center">
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Buscando...
-                                            </div>
-                                        )}
-                                        {!loadingReferentes && referentes.length === 0 && searchTerm.length >= 3 && (
-                                            <CommandEmpty>No se encontraron personas.</CommandEmpty>
-                                        )}
-                                        {!loadingReferentes && searchTerm.length < 3 && (
-                                            <div className="py-6 text-center text-sm text-muted-foreground">
-                                                Escriba al menos 3 caracteres para buscar
-                                            </div>
-                                        )}
-                                        <CommandGroup>
-                                            {referentes.map((persona) => (
-                                                <CommandItem
-                                                    key={persona.id}
-                                                    value={`${persona.nombres} ${persona.apellidos}`}
-                                                    onSelect={(currentValue) => {
-                                                        // Guardamos el nombre completo como string ya que el esquema espera string
-                                                        // Idealmente deberíamos guardar el ID si cambiamos el esquema
-                                                        form.setValue("referido_por", currentValue)
-                                                        setOpen(false)
-                                                    }}
-                                                >
-                                                    <Check
-                                                        className={cn(
-                                                            "mr-2 h-4 w-4",
-                                                            field.value === `${persona.nombres} ${persona.apellidos}`
-                                                                ? "opacity-100"
-                                                                : "opacity-0"
-                                                        )}
-                                                    />
-                                                    <div className="flex flex-col">
-                                                        <span>{persona.nombres} {persona.apellidos}</span>
-                                                        <span className="text-xs text-muted-foreground">CC: {persona.numero_documento}</span>
-                                                    </div>
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup>
-                                    </CommandList>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
+                    <FormItem>
+                        <FormLabel>Referencia</FormLabel>
+                        <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccione referencia" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {loadingReferencias ? (
+                                        <div className="p-3 text-sm text-muted-foreground">Cargando...</div>
+                                    ) : referencias.length === 0 ? (
+                                        <div className="p-3 text-sm text-muted-foreground">No hay referencias</div>
+                                    ) : (
+                                        referencias.map(r => (
+                                            <SelectItem key={r.id} value={r.id}>{r.nombre}</SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </FormControl>
                         <FormMessage />
                     </FormItem>
                 )}
@@ -173,19 +133,7 @@ export function ReferenciasSection({ form }: ReferenciasSectionProps) {
                 )}
             />
 
-            <FormField
-                control={form.control}
-                name="lider_responsable"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Líder Responsable</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Nombre del líder a cargo" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
+           
         </div>
     )
 }

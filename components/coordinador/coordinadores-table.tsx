@@ -168,7 +168,7 @@ export function CoordinadoresTable() {
                                                 className="border-b border-border hover:bg-muted/50 transition-colors"
                                             >
                                                 <td className="px-6 py-4 text-sm text-foreground">
-                                                    <div>{coordinador.nombres} {coordinador.apellidos}</div>
+                                                    <div>{coordinador.nombres || coordinador.email || 'Sin nombre'}{coordinador.apellidos ? ` ${coordinador.apellidos}` : ''}</div>
                                                     <div className="text-xs text-muted-foreground">
                                                         {coordinador.tipo_documento} {coordinador.numero_documento}
                                                     </div>
@@ -192,7 +192,15 @@ export function CoordinadoresTable() {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="w-8 h-8 text-muted-foreground hover:text-foreground"
-                                                                onClick={() => router.push(`/dashboard/coordinador/${coordinador.coordinador_id}`)}
+                                                                onClick={() => {
+                                                                    const id = coordinador.coordinador_id
+                                                                    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+                                                                    if (!id || !uuidRegex.test(id)) {
+                                                                        toast.error('ID de coordinador inválido')
+                                                                        return
+                                                                    }
+                                                                    router.push(`/dashboard/coordinador/${id}`)
+                                                                }}
                                                             >
                                                                 <Edit className="w-4 h-4" />
                                                             </Button>
