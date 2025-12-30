@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Form } from "@/components/ui/form"
 import { Loader2, Save, ChevronLeft, ChevronRight } from "lucide-react"
+import { Cloud, Edit3 } from 'lucide-react'
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { usePersonas } from "@/lib/hooks/use-personas"
@@ -135,11 +138,17 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
       setIsSubmitting(true)
 
       // Preparar datos para enviar
-      const personaData = {
+      const personaData: any = {
         ...data,
         // Campos de auditoría
         actualizado_por: usuarioActual?.id,
       }
+
+      // Some form fields (compromiso_id, referencia_id) are UI-only and may not exist
+      // in the usuarios table in the DB schema. Remove them from the payload to avoid
+      // Supabase schema/cache errors. The numeric compromiso_* fields are persisted.
+      if (personaData.compromiso_id !== undefined) delete personaData.compromiso_id
+      if (personaData.referencia_id !== undefined) delete personaData.referencia_id
 
       if (isEditing && initialData?.id) {
         await actualizar(initialData.id, personaData as any)
@@ -155,22 +164,73 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
 
       router.push("/dashboard/personas")
       router.refresh()
-    } catch (error) {
+      } catch (error: any) {
       console.error("Error al guardar persona:", error)
-      toast.error("Error al guardar la persona")
+      const msg = error?.message || String(error) || "Error al guardar la persona"
+      toast.error(msg)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  // Observación cuando inactivo
+  const [obsModalOpen, setObsModalOpen] = useState(false)
+  const [obsValue, setObsValue] = useState('')
+
+  async function saveObservation() {
+    try {
+      if (!form.getValues('numero_documento') && !initialData?.id) return
+      const usuarioId = initialData?.id || null
+      if (!usuarioId) return
+      await actualizar(usuarioId, { observaciones: obsValue })
+      setObsModalOpen(false)
+      toast.success('Observación guardada')
+    } catch (e) {
+      toast.error('Error guardando observación')
+    }
+  }
+
+  // Lápiz amarillo: mostrar resumen militante
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false)
+  const [militanteSummary, setMilitanteSummary] = useState<any>(null)
+
+  async function openSummary() {
+    try {
+      const usuarioId = initialData?.id
+      if (!usuarioId) return
+      const res = await fetch(`/api/militante/summary/${usuarioId}`)
+      if (res.ok) {
+        const d = await res.json()
+        setMilitanteSummary(d)
+        setSummaryModalOpen(true)
+      } else {
+        setMilitanteSummary(null)
+        setSummaryModalOpen(true)
+      }
+    } catch (e) {
+      console.error(e)
+      setMilitanteSummary(null)
+      setSummaryModalOpen(true)
     }
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="flex items-center justify-between">
+       
           <h2 className="text-2xl font-bold tracking-tight">
             {isEditing ? "Editar Persona" : "Nueva Persona"}
           </h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {form.watch('estado') === 'inactivo' && (
+              <>
+                <button type="button" className="text-muted-foreground" onClick={() => setObsModalOpen(true)} title="Agregar observación">
+                  <Cloud className="h-5 w-5 text-sky-500" />
+                </button>
+              </>
+            )}
+         
+            <div className="flex gap-2">
             <Button
               type="button"
               variant="outline"
@@ -186,6 +246,40 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
             </Button>
           </div>
         </div>
+          {/* Observation modal */}
+          <Dialog open={obsModalOpen} onOpenChange={setObsModalOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Agregar observación (usuario inactivo)</DialogTitle>
+              </DialogHeader>
+              <div className="mt-2">
+                <Textarea value={obsValue} onChange={(e) => setObsValue((e.target as HTMLTextAreaElement).value)} />
+                <div className="flex justify-end mt-2">
+                  <Button variant="outline" onClick={() => setObsModalOpen(false)}>Cerrar</Button>
+                  <Button className="ml-2" onClick={saveObservation}>Guardar</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Summary modal */}
+          <Dialog open={summaryModalOpen} onOpenChange={setSummaryModalOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Resumen Militante</DialogTitle>
+              </DialogHeader>
+              <div className="mt-2">
+                {militanteSummary ? (
+                  <pre className="text-sm whitespace-pre-wrap">{JSON.stringify(militanteSummary, null, 2)}</pre>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No hay información de militancia para este usuario.</div>
+                )}
+                <div className="flex justify-end mt-2">
+                  <Button onClick={() => setSummaryModalOpen(false)}>Cerrar</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* Navegación lateral de secciones */}
@@ -277,9 +371,14 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
                 </div>
               </CardContent>
             </Card>
+          
+       
           </div>
+        
         </div>
       </form>
     </Form>
+                  
+  
   )
 }

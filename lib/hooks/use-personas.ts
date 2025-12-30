@@ -20,6 +20,23 @@ export function usePersonas() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 
+    function normalizeError(err: unknown): Error {
+        if (err instanceof Error) return err
+        try {
+            if (err && typeof err === 'object') {
+                // Supabase errors often have a 'message' property
+                const anyErr = err as any
+                if (typeof anyErr.message === 'string' && anyErr.message.length > 0) return new Error(anyErr.message)
+                if (typeof anyErr.error === 'string' && anyErr.error.length > 0) return new Error(anyErr.error)
+                // Fallback to JSON
+                return new Error(JSON.stringify(anyErr))
+            }
+        } catch (e) {
+            // ignore
+        }
+        return new Error('Error desconocido')
+    }
+
     const listar = useCallback(async (filtros: FiltrosPersonas = {}, page = 1, pageSize = 10) => {
         try {
             setLoading(true)
@@ -68,7 +85,7 @@ export function usePersonas() {
                 totalPages: Math.ceil((count || 0) / pageSize),
             }
         } catch (err) {
-            const error = err instanceof Error ? err : new Error('Error desconocido')
+            const error = normalizeError(err)
             setError(error)
             throw error
         } finally {
@@ -91,7 +108,7 @@ export function usePersonas() {
 
             return data
         } catch (err) {
-            const error = err instanceof Error ? err : new Error('Error desconocido')
+            const error = normalizeError(err)
             setError(error)
             throw error
         } finally {
@@ -114,7 +131,7 @@ export function usePersonas() {
 
             return data
         } catch (err) {
-            const error = err instanceof Error ? err : new Error('Error desconocido')
+            const error = normalizeError(err)
             setError(error)
             throw error
         } finally {
@@ -138,7 +155,7 @@ export function usePersonas() {
 
             return data
         } catch (err) {
-            const error = err instanceof Error ? err : new Error('Error desconocido')
+            const error = normalizeError(err)
             setError(error)
             throw error
         } finally {
@@ -157,7 +174,7 @@ export function usePersonas() {
 
             return true
         } catch (err) {
-            const error = err instanceof Error ? err : new Error('Error desconocido')
+            const error = normalizeError(err)
             setError(error)
             throw error
         } finally {

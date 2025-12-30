@@ -1,47 +1,72 @@
--- =====================================================
--- GESTIÓN DE LUGARES: CIUDADES Y BARRIOS
--- =====================================================
+create table public.barrios (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  nombre character varying(100) not null,
+  codigo character varying(20) null,
+  localidad_id uuid null,
+  ciudad_id uuid null,
+  activo boolean null default true,
+  orden integer null,
+  creado_en timestamp with time zone null default now(),
+  actualizado_en timestamp with time zone null default now(),
+  constraint barrios_pkey primary key (id),
+  constraint barrios_nombre_localidad_id_key unique (nombre, localidad_id),
+  constraint barrios_localidad_id_fkey foreign KEY (localidad_id) references localidades (id) on delete CASCADE,
+  constraint barrios_ciudad_id_fkey foreign KEY (ciudad_id) references ciudades (id) on delete CASCADE
+) TABLESPACE pg_default;
 
--- 1. Tabla: ciudades
-CREATE TABLE IF NOT EXISTS public.ciudades (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre VARCHAR(100) UNIQUE NOT NULL,
-    codigo VARCHAR(20),
-    activo BOOLEAN DEFAULT true,
-    orden INTEGER,
-    
-    -- Auditoría
-    creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+create index IF not exists idx_barrios_nombre on public.barrios using btree (nombre) TABLESPACE pg_default;
 
--- 2. Tabla: barrios
--- Nota: Se asume que barrios pertenece a una ciudad. 
--- Si existe la tabla localidades, se puede vincular, pero aquí lo hacemos directo a ciudad o opcional.
-CREATE TABLE IF NOT EXISTS public.barrios (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nombre VARCHAR(100) NOT NULL,
-    codigo VARCHAR(20),
-    ciudad_id UUID REFERENCES public.ciudades(id) ON DELETE CASCADE,
-    activo BOOLEAN DEFAULT true,
-    orden INTEGER,
-    
-    -- Auditoría
-    creado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    actualizado_en TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+create index IF not exists idx_barrios_localidad on public.barrios using btree (localidad_id) TABLESPACE pg_default;
 
--- Habilitar RLS
-ALTER TABLE public.ciudades ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.barrios ENABLE ROW LEVEL SECURITY;
+create index IF not exists idx_barrios_ciudad on public.barrios using btree (ciudad_id) TABLESPACE pg_default;
 
--- Políticas RLS (Permitir todo a usuarios autenticados por ahora para gestión)
-CREATE POLICY "Auth users select ciudades" ON public.ciudades FOR SELECT USING (auth.role() = 'authenticated');
-CREATE POLICY "Auth users insert ciudades" ON public.ciudades FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Auth users update ciudades" ON public.ciudades FOR UPDATE USING (auth.role() = 'authenticated');
-CREATE POLICY "Auth users delete ciudades" ON public.ciudades FOR DELETE USING (auth.role() = 'authenticated');
+create index IF not exists idx_barrios_activo on public.barrios using btree (activo) TABLESPACE pg_default;
 
-CREATE POLICY "Auth users select barrios" ON public.barrios FOR SELECT USING (auth.role() = 'authenticated');
-CREATE POLICY "Auth users insert barrios" ON public.barrios FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Auth users update barrios" ON public.barrios FOR UPDATE USING (auth.role() = 'authenticated');
-CREATE POLICY "Auth users delete barrios" ON public.barrios FOR DELETE USING (auth.role() = 'authenticated');
+create trigger trigger_actualizar_barrios BEFORE
+update on barrios for EACH row
+execute FUNCTION actualizar_timestamp ();
+
+----------------------------------------------------
+create table public.ciudades (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  nombre character varying(100) not null,
+  codigo character varying(20) null,
+  activo boolean null default true,
+  orden integer null,
+  creado_en timestamp with time zone null default now(),
+  actualizado_en timestamp with time zone null default now(),
+  constraint ciudades_pkey primary key (id),
+  constraint ciudades_nombre_key unique (nombre)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_ciudades_nombre on public.ciudades using btree (nombre) TABLESPACE pg_default;
+
+create index IF not exists idx_ciudades_activo on public.ciudades using btree (activo) TABLESPACE pg_default;
+
+create trigger trigger_actualizar_ciudades BEFORE
+update on ciudades for EACH row
+execute FUNCTION actualizar_timestamp ();
+------------------------------------------------
+create table public.localidades (
+  id uuid not null default extensions.uuid_generate_v4 (),
+  nombre character varying(100) not null,
+  codigo character varying(20) null,
+  ciudad_id uuid null,
+  activo boolean null default true,
+  orden integer null,
+  creado_en timestamp with time zone null default now(),
+  actualizado_en timestamp with time zone null default now(),
+  constraint localidades_pkey primary key (id),
+  constraint localidades_nombre_ciudad_id_key unique (nombre, ciudad_id),
+  constraint localidades_ciudad_id_fkey foreign KEY (ciudad_id) references ciudades (id) on delete CASCADE
+) TABLESPACE pg_default;
+
+create index IF not exists idx_localidades_nombre on public.localidades using btree (nombre) TABLESPACE pg_default;
+
+create index IF not exists idx_localidades_ciudad on public.localidades using btree (ciudad_id) TABLESPACE pg_default;
+
+create index IF not exists idx_localidades_activo on public.localidades using btree (activo) TABLESPACE pg_default;
+
+create trigger trigger_actualizar_localidades BEFORE
+update on localidades for EACH row
+execute FUNCTION actualizar_timestamp ();

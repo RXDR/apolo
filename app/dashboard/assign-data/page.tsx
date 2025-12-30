@@ -1,10 +1,10 @@
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { AssignDataHeader } from "@/components/assign-data/assign-data-header"
-import { AssignmentList } from "@/components/assign-data/assignment-list"
+import { PersonaTable } from "@/components/assign-data/persona-table"
 
 export const metadata = {
   title: "Asignar Datos - APOLO",
-  description: "Asigna recursos y datos a coordinadores",
+  description: "Gestión de tabla persona y sincronización con usuarios",
 }
 
 export default function AssignDataPage() {
@@ -12,7 +12,7 @@ export default function AssignDataPage() {
     <DashboardLayout>
       <div className="space-y-6">
         <AssignDataHeader />
-        <AssignmentList />
+        <PersonaTable />
       </div>
     </DashboardLayout>
   )

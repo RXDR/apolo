@@ -16,12 +16,24 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { UseFormReturn } from "react-hook-form"
+import { useEffect, useState } from 'react'
 
 interface DatosPersonalesSectionProps {
     form: UseFormReturn<any>
 }
 
 export function DatosPersonalesSection({ form }: DatosPersonalesSectionProps) {
+    const [grupos, setGrupos] = useState<any[]>([])
+
+    useEffect(() => {
+        let mounted = true
+        fetch('/api/grupo-etnico')
+            .then(r => r.json())
+            .then(d => { if (mounted) setGrupos(d || []) })
+            .catch(() => { if (mounted) setGrupos([]) })
+        return () => { mounted = false }
+    }, [])
+
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
@@ -174,6 +186,29 @@ export function DatosPersonalesSection({ form }: DatosPersonalesSectionProps) {
                                 <SelectItem value="Unión Libre">Unión Libre</SelectItem>
                                 <SelectItem value="Divorciado">Divorciado/a</SelectItem>
                                 <SelectItem value="Viudo">Viudo/a</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+
+            <FormField
+                control={form.control}
+                name="grupo_etnico"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Grupo Étnico</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccione grupo étnico" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {grupos.map(g => (
+                                    <SelectItem key={g.id} value={String(g.id)}>{g.nombre}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                         <FormMessage />

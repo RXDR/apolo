@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, ChangeEvent } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Search, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Shield } from "lucide-react"
+import { Search, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Shield, Edit3, Cloud } from "lucide-react"
 import { usePersonas } from "@/lib/hooks/use-personas"
 import { useCatalogos } from "@/lib/hooks/use-catalogos"
 import { usePermisos } from "@/lib/hooks/use-permisos"
@@ -46,7 +47,7 @@ const getStatusColor = (status: string) => {
 
 export function PersonasTable() {
   const router = useRouter()
-  const { listar, eliminar, loading: personasLoading } = usePersonas()
+  const { listar, eliminar, loading: personasLoading, cambiarEstado, actualizar } = usePersonas()
   const { ciudades, zonas, loading: catalogosLoading } = useCatalogos()
   const { permisos } = usePermisos("Módulo Personas")
 
@@ -68,6 +69,14 @@ export function PersonasTable() {
   // Estado para modal de imagen
   const [imagenModalOpen, setImagenModalOpen] = useState(false)
   const [imagenSeleccionadaUrl, setImagenSeleccionadaUrl] = useState<string | null>(null)
+  // Summary modal for militant data
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false)
+  const [militanteSummary, setMilitanteSummary] = useState<any>(null)
+
+  // Observaciones modal
+  const [obsModalOpen, setObsModalOpen] = useState(false)
+  const [obsValue, setObsValue] = useState("")
+  const [obsUsuarioId, setObsUsuarioId] = useState<string | null>(null)
 
   const pageSize = 10
 
@@ -275,7 +284,52 @@ export function PersonasTable() {
                             {persona.zonas?.nombre || "-"}
                           </td>
                           <td className="px-6 py-4">
-                            <Badge className={getStatusColor(persona.estado)}>{persona.estado}</Badge>
+                            <div className="flex items-center gap-2">
+                              {permisos?.actualizar ? (
+                                <Select
+                                  value={persona.estado}
+                                  onValueChange={async (value) => {
+                                    try {
+                                      if (!value) return
+                                      await cambiarEstado(persona.id, value as any)
+                                      // Optimistically update UI
+                                      setPersonas((prev) => prev.map((p) => (p.id === persona.id ? { ...p, estado: value } : p)))
+                                      toast.success('Estado actualizado')
+                                    } catch (e) {
+                                      console.error('Error cambiando estado:', e)
+                                      toast.error('Error actualizando estado')
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="w-44">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="activo">Activo</SelectItem>
+                                    <SelectItem value="inactivo">Inactivo</SelectItem>
+                                    <SelectItem value="suspendido">Suspendido</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Badge className={getStatusColor(persona.estado)}>{persona.estado}</Badge>
+                              )}
+
+                              {/* Mostrar icono de globo si está inactivo */}
+                              {persona.estado === 'inactivo' && (
+                                <button
+                                  type="button"
+                                  className="text-muted-foreground"
+                                  onClick={() => {
+                                    setObsUsuarioId(persona.id)
+                                    setObsValue(persona.observaciones || '')
+                                    setObsModalOpen(true)
+                                  }}
+                                  title="Agregar observación"
+                                >
+                                  <Cloud className="h-5 w-5 text-sky-500" />
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex gap-2">
@@ -300,6 +354,31 @@ export function PersonasTable() {
                                   <Shield className="w-4 h-4" />
                                 </Button>
                               )}
+                              {/* Editar militante: show yellow pencil and open summary modal */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="w-8 h-8 text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`/api/militante/summary/${persona.id}`)
+                                    if (res.ok) {
+                                      const d = await res.json()
+                                      setMilitanteSummary(d)
+                                    } else {
+                                      setMilitanteSummary(null)
+                                    }
+                                    setSummaryModalOpen(true)
+                                  } catch (e) {
+                                    console.error('Error fetching militante summary from table:', e)
+                                    setMilitanteSummary(null)
+                                    setSummaryModalOpen(true)
+                                  }
+                                }}
+                                title="Ver datos de militante"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </Button>
                               {permisos?.eliminar && (
                                 <Button
                                   variant="ghost"
@@ -387,6 +466,56 @@ export function PersonasTable() {
               className="rounded-md object-contain"
             />
           )}
+        </DialogContent>
+      </Dialog>
+      {/* Summary modal for militant */}
+      <Dialog open={summaryModalOpen} onOpenChange={setSummaryModalOpen}>
+        <DialogContent>
+          <VisuallyHidden>
+            <DialogTitle>Resumen de Militante</DialogTitle>
+            <DialogDescription>Resumen de datos de militancia para este usuario.</DialogDescription>
+          </VisuallyHidden>
+          <div className="mt-2">
+            {militanteSummary ? (
+              <pre className="text-sm whitespace-pre-wrap">{JSON.stringify(militanteSummary, null, 2)}</pre>
+            ) : (
+              <div className="text-sm text-muted-foreground">No hay información de militancia para este usuario.</div>
+            )}
+            <div className="flex justify-end mt-2">
+              <Button onClick={() => setSummaryModalOpen(false)}>Cerrar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Observaciones modal (para estado inactivo) */}
+      <Dialog open={obsModalOpen} onOpenChange={setObsModalOpen}>
+        <DialogContent>
+          <DialogTitle>Agregar observación (usuario inactivo)</DialogTitle>
+          <DialogDescription>Escribe el motivo por el cual el usuario está inactivo.</DialogDescription>
+          <div className="mt-2">
+            <Textarea value={obsValue} onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setObsValue(e.target.value)} />
+            <div className="flex justify-end mt-2">
+              <Button variant="outline" onClick={() => setObsModalOpen(false)}>Cerrar</Button>
+              <Button
+                className="ml-2"
+                onClick={async () => {
+                  try {
+                    if (!obsUsuarioId) return
+                    await actualizar(obsUsuarioId, { observaciones: obsValue })
+                    setObsModalOpen(false)
+                    toast.success('Observación guardada')
+                    // refresh list
+                    cargarPersonas()
+                  } catch (e) {
+                    console.error('Error guardando observación:', e)
+                    toast.error('Error guardando observación')
+                  }
+                }}
+              >
+                Guardar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </Dialog>
