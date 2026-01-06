@@ -6,6 +6,7 @@ SELECT
     m.id as militante_id,
     m.tipo,
     tm.descripcion as tipo_descripcion, -- Campo añadido
+    tm.codigo as tipo_codigo,
     m.estado,
     m.compromiso_marketing,
     m.compromiso_cautivo,
@@ -34,7 +35,7 @@ LEFT JOIN public.ciudades ciudad ON u.ciudad_id = ciudad.id
 LEFT JOIN public.zonas zona ON u.zona_id = zona.id
 LEFT JOIN public.coordinadores coord ON m.coordinador_id = coord.id
 LEFT JOIN public.usuarios coord_usuario ON coord.usuario_id = coord_usuario.id
-LEFT JOIN public.tipos_militante tm ON CAST(m.tipo AS INTEGER) = tm.codigo; -- Join añadido
+LEFT JOIN public.tipos_militante tm ON CAST(m.tipo AS INTEGER) = tm.codigo; -- Join añadido (m.tipo puede ser código numérico)
 
 COMMENT ON VIEW public.v_militantes_completo IS 'Vista de militantes con información completa, incluyendo descripción del tipo de militante.';
 

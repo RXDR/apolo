@@ -155,7 +155,7 @@ export function MilitantesTable() {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-3 text-sm">{militante.tipo_descripcion || militante.tipo}</td>
+                                                <td className="px-4 py-3 text-sm">{militante.tipo_codigo ?? militante.tipo_descripcion ?? militante.tipo}</td>
                                                 <td className="px-4 py-3 text-sm">
                                                     {militante.coordinador_nombre || militante.coordinador_email || "-"}
                                                 </td>
@@ -169,7 +169,7 @@ export function MilitantesTable() {
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
                                                     <div className="flex justify-end gap-2">
-                                                        {permisos?.UPDATE && (
+                                                        {permisos?.actualizar && (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
@@ -178,7 +178,7 @@ export function MilitantesTable() {
                                                                 <Edit className="h-4 w-4" />
                                                             </Button>
                                                         )}
-                                                        {permisos?.DELETE && (
+                                                        {permisos?.eliminar && (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"

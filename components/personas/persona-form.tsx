@@ -153,6 +153,23 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
       if (isEditing && initialData?.id) {
         await actualizar(initialData.id, personaData as any)
         toast.success("Persona actualizada correctamente")
+        // After updating usuario, try to sync militante commitments if militante exists
+        try {
+          const milRes = await fetch(`/api/militante/summary/${initialData.id}`)
+          if (milRes.ok) {
+            const mil = await milRes.json()
+            if (mil) {
+              // Send PATCH to ensure militante row is synced from usuario
+              await fetch('/api/militante', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: mil.id || mil.militante_id, compromiso_marketing: data.compromiso_marketing, compromiso_cautivo: data.compromiso_cautivo, compromiso_impacto: data.compromiso_impacto }),
+              })
+            }
+          }
+        } catch (e) {
+          console.debug('No se pudo sincronizar militante tras actualizar usuario:', e)
+        }
       } else {
         await crear({
           ...personaData,
@@ -160,6 +177,22 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
           estado: data.estado || 'activo',
         } as any)
         toast.success("Persona creada correctamente")
+        // When creating persona, we might also want to sync militante if exists - try
+        try {
+          const milRes = await fetch(`/api/militante/summary/${initialData?.id}`)
+          if (milRes.ok) {
+            const mil = await milRes.json()
+            if (mil) {
+              await fetch('/api/militante', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: mil.id || mil.militante_id, compromiso_marketing: data.compromiso_marketing, compromiso_cautivo: data.compromiso_cautivo, compromiso_impacto: data.compromiso_impacto }),
+              })
+            }
+          }
+        } catch (e) {
+          console.debug('No se pudo sincronizar militante tras crear usuario:', e)
+        }
       }
 
       router.push("/dashboard/personas")

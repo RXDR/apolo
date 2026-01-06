@@ -65,7 +65,7 @@ interface MilitanteFormProps {
 export function MilitanteForm({ initialData, isEditing = false }: MilitanteFormProps) {
     const router = useRouter()
     const { crear, actualizar, loading } = useMilitantes()
-    const { buscarReferentes } = usePersonas()
+    const { buscarReferentes, obtenerPorId: obtenerPersonaPorId, actualizar: actualizarUsuario } = usePersonas()
     const { buscarCoordinadores, buscarDirigentes } = useCoordinadores()
     const { listar: listarTiposMilitante } = useTiposMilitante()
     const [submitting, setSubmitting] = useState(false)
@@ -126,6 +126,42 @@ export function MilitanteForm({ initialData, isEditing = false }: MilitanteFormP
         cargarTipos()
     }, [listarTiposMilitante])
 
+    // Preload compromiso_* from usuarios when editing (prefer usuarios values)
+    useEffect(() => {
+        async function preloadCompromisos() {
+            try {
+                const uid = initialData?.usuario_id
+                if (!uid) return
+                const usuario = await obtenerPersonaPorId(uid)
+                if (!usuario) return
+
+                // setValue from react-hook-form
+                if (usuario.compromiso_marketing !== undefined && usuario.compromiso_marketing !== null) setValue('compromiso_marketing', usuario.compromiso_marketing)
+                if (usuario.compromiso_cautivo !== undefined && usuario.compromiso_cautivo !== null) setValue('compromiso_cautivo', usuario.compromiso_cautivo)
+                if (usuario.compromiso_impacto !== undefined && usuario.compromiso_impacto !== null) setValue('compromiso_impacto', usuario.compromiso_impacto)
+            } catch (e) {
+                console.debug('No se pudo precargar compromisos desde usuarios:', e)
+            }
+        }
+        preloadCompromisos()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialData?.usuario_id])
+
+    // Normalize initialData.tipo to UUID if necessary (codigo or descripcion -> id)
+    useEffect(() => {
+        if (!initialData?.tipo || tiposMilitante.length === 0) return
+        const t = initialData.tipo
+        const foundById = tiposMilitante.find(x => x.id === t)
+        if (foundById) return // already UUID
+        const foundByCodigo = tiposMilitante.find(x => String(x.codigo) === String(t))
+        if (foundByCodigo) setValue('tipo', foundByCodigo.id)
+        else {
+            const foundByDesc = tiposMilitante.find(x => String(x.descripcion) === String(t))
+            if (foundByDesc) setValue('tipo', foundByDesc.id)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialData?.tipo, tiposMilitante])
+
     // Buscar personas
     useEffect(() => {
         if (personasSearch.length < 3) {
@@ -178,11 +214,47 @@ export function MilitanteForm({ initialData, isEditing = false }: MilitanteFormP
                 formulario: data.formulario ?? undefined,
             }
 
+            // Convert numeric fields to strings for the API/hook which expects string values
+            const apiPayload: any = {
+                ...finalData,
+                compromiso_marketing: finalData.compromiso_marketing != null ? String(finalData.compromiso_marketing) : undefined,
+                compromiso_cautivo: finalData.compromiso_cautivo != null ? String(finalData.compromiso_cautivo) : undefined,
+                compromiso_impacto: finalData.compromiso_impacto != null ? String(finalData.compromiso_impacto) : undefined,
+                formulario: finalData.formulario != null ? String(finalData.formulario) : undefined,
+            }
+
             if (isEditing && initialData?.id) {
-                await actualizar(initialData.id, finalData)
+                await actualizar(initialData.id, apiPayload)
+                // Sync usuario compromisos
+                try {
+                    if (finalData.usuario_id) {
+                        await actualizarUsuario(finalData.usuario_id, {
+                            compromiso_marketing: finalData.compromiso_marketing ?? undefined,
+                            compromiso_cautivo: finalData.compromiso_cautivo ?? undefined,
+                            compromiso_impacto: finalData.compromiso_impacto ?? undefined,
+                        })
+                    }
+                } catch (e) {
+                    console.warn('No se pudo sincronizar compromisos en usuarios:', e)
+                }
+
                 toast.success("Militante actualizado exitosamente")
             } else {
-                await crear(finalData)
+                const created = await crear(apiPayload)
+
+                // Sync usuario compromisos after create
+                try {
+                    if (finalData.usuario_id) {
+                        await actualizarUsuario(finalData.usuario_id, {
+                            compromiso_marketing: finalData.compromiso_marketing ?? undefined,
+                            compromiso_cautivo: finalData.compromiso_cautivo ?? undefined,
+                            compromiso_impacto: finalData.compromiso_impacto ?? undefined,
+                        })
+                    }
+                } catch (e) {
+                    console.warn('No se pudo sincronizar compromisos en usuarios tras crear:', e)
+                }
+
                 toast.success("Militante creado exitosamente")
             }
 
@@ -305,8 +377,8 @@ export function MilitanteForm({ initialData, isEditing = false }: MilitanteFormP
                                     </SelectTrigger>
                                     <SelectContent>
                                         {tiposMilitante.map(tipo => (
-                                            <SelectItem key={tipo.id} value={String(tipo.codigo)}>
-                                                {tipo.codigo}
+                                            <SelectItem key={tipo.id} value={String(tipo.id)}>
+                                                {tipo.codigo ? `${tipo.codigo} - ${tipo.descripcion}` : tipo.descripcion}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>

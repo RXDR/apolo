@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/select"
 import { Search, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Shield, Edit3, Cloud } from "lucide-react"
 import { usePersonas } from "@/lib/hooks/use-personas"
+import { useTiposMilitante } from "@/lib/hooks/use-tipos-militante"
+import { useMilitantes } from '@/lib/hooks/use-militantes'
 import { useCatalogos } from "@/lib/hooks/use-catalogos"
 import { usePermisos } from "@/lib/hooks/use-permisos"
 import { toast } from "sonner"
@@ -47,7 +49,7 @@ const getStatusColor = (status: string) => {
 
 export function PersonasTable() {
   const router = useRouter()
-  const { listar, eliminar, loading: personasLoading, cambiarEstado, actualizar } = usePersonas()
+  const { listar, eliminar, loading: personasLoading, cambiarEstado, actualizar, obtenerPorId: obtenerUsuarioPorId } = usePersonas()
   const { ciudades, zonas, loading: catalogosLoading } = useCatalogos()
   const { permisos } = usePermisos("Módulo Personas")
 
@@ -72,6 +74,27 @@ export function PersonasTable() {
   // Summary modal for militant data
   const [summaryModalOpen, setSummaryModalOpen] = useState(false)
   const [militanteSummary, setMilitanteSummary] = useState<any>(null)
+  const [militanteModalOpen, setMilitanteModalOpen] = useState(false)
+  const [militanteData, setMilitanteData] = useState<any>(null)
+  const { actualizar: actualizarMilitante, obtenerPorId } = useMilitantes()
+  const { listar: listarTiposMilitante } = useTiposMilitante()
+  const [tiposMilitante, setTiposMilitante] = useState<any[]>([])
+
+  // Cargar tipos de militante al montar para usar en el modal
+  useEffect(() => {
+    let mounted = true
+    async function loadTipos() {
+      try {
+        const tipos = await listarTiposMilitante()
+        if (mounted) setTiposMilitante(tipos || [])
+      } catch (e) {
+        console.warn('No se pudieron cargar tipos_militante:', e)
+        if (mounted) setTiposMilitante([])
+      }
+    }
+    loadTipos()
+    return () => { mounted = false }
+  }, [listarTiposMilitante])
 
   // Observaciones modal
   const [obsModalOpen, setObsModalOpen] = useState(false)
@@ -82,38 +105,24 @@ export function PersonasTable() {
 
   useEffect(() => {
     cargarPersonas()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, search, estadoFilter, ciudadFilter, zonaFilter])
 
   async function cargarPersonas() {
     try {
       const filtros: any = {}
-
       if (search) filtros.busqueda = search
-      if (estadoFilter !== "todos") filtros.estado = estadoFilter
-      if (ciudadFilter !== "todos") filtros.ciudad_id = ciudadFilter
-      if (zonaFilter !== "todos") filtros.zona_id = zonaFilter
+      if (estadoFilter !== 'todos') filtros.estado = estadoFilter
+      if (ciudadFilter !== 'todos') filtros.ciudad_id = ciudadFilter
+      if (zonaFilter !== 'todos') filtros.zona_id = zonaFilter
 
       const result = await listar(filtros, currentPage, pageSize)
-
       setPersonas(result.data)
       setTotalCount(result.count)
       setTotalPages(result.totalPages)
-    } catch (error) {
-      console.error("Error cargando personas:", error)
-      toast.error("Error al cargar personas")
-    }
-  }
-
-  async function handleEliminar(id: string, nombre: string) {
-    if (!confirm(`¿Estás seguro de eliminar a ${nombre}?`)) return
-
-    try {
-      await eliminar(id)
-      toast.success("Persona eliminada exitosamente")
-      cargarPersonas()
-    } catch (error) {
-      console.error("Error eliminando persona:", error)
-      toast.error("Error al eliminar persona")
+    } catch (e) {
+      console.error('Error cargando personas:', e)
+      toast.error('Error al cargar personas')
     }
   }
 
@@ -126,6 +135,19 @@ export function PersonasTable() {
     setImagenSeleccionadaUrl(url)
     setImagenModalOpen(true)
   }
+
+  async function handleEliminar(id: string, nombre: string) {
+    if (!confirm(`¿Estás seguro de eliminar a ${nombre}?`)) return
+    try {
+      await eliminar(id)
+      toast.success('Persona eliminada exitosamente')
+      cargarPersonas()
+    } catch (e) {
+      console.error('Error eliminando persona:', e)
+      toast.error('Error al eliminar persona')
+    }
+  }
+
 
   const loading = personasLoading || catalogosLoading
 
@@ -361,21 +383,66 @@ export function PersonasTable() {
                                 className="w-8 h-8 text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900"
                                 onClick={async () => {
                                   try {
+                                    // Fetch militante record by usuario_id using existing API
                                     const res = await fetch(`/api/militante/summary/${persona.id}`)
-                                    if (res.ok) {
-                                      const d = await res.json()
-                                      setMilitanteSummary(d)
-                                    } else {
-                                      setMilitanteSummary(null)
+                                    let d: any = null
+                                    if (res.ok) d = await res.json()
+
+                                    // Try to fetch usuario row to preload compromiso fields (usuarios wins over militantes)
+                                    let usuarioRow: any = null
+                                    try {
+                                      usuarioRow = await obtenerUsuarioPorId(persona.id)
+                                    } catch (ue) {
+                                      console.debug('No se pudo obtener usuario para precargar compromisos:', ue)
                                     }
-                                    setSummaryModalOpen(true)
+
+                                    if (d) {
+                                      // merge compromiso fields from usuario if present
+                                      const merged = { ...(d || {}) }
+                                      if (usuarioRow) {
+                                        if (usuarioRow.compromiso_marketing !== undefined && usuarioRow.compromiso_marketing !== null) merged.compromiso_marketing = usuarioRow.compromiso_marketing
+                                        if (usuarioRow.compromiso_cautivo !== undefined && usuarioRow.compromiso_cautivo !== null) merged.compromiso_cautivo = usuarioRow.compromiso_cautivo
+                                        if (usuarioRow.compromiso_impacto !== undefined && usuarioRow.compromiso_impacto !== null) merged.compromiso_impacto = usuarioRow.compromiso_impacto
+                                      }
+
+                                      // Normalize tipo: API might return id, codigo or descripcion; prefer id from tiposMilitante
+                                      if (merged.tipo && tiposMilitante.length > 0) {
+                                        const foundById = tiposMilitante.find(t => t.id === merged.tipo)
+                                        if (foundById) merged.tipo = foundById.id
+                                        else {
+                                          const foundByCodigo = tiposMilitante.find(t => String(t.codigo) === String(merged.tipo))
+                                          if (foundByCodigo) merged.tipo = foundByCodigo.id
+                                          else {
+                                            const foundByDesc = tiposMilitante.find(t => String(t.descripcion) === String(merged.tipo))
+                                            if (foundByDesc) merged.tipo = foundByDesc.id
+                                          }
+                                        }
+                                      }
+
+                                      setMilitanteData(merged)
+                                      setMilitanteModalOpen(true)
+                                    } else {
+                                      // No militante for this usuario - but still preload usuario compromiso fields into modal
+                                      const empty: any = { usuario_id: persona.id }
+                                      if (usuarioRow) {
+                                        empty.compromiso_marketing = usuarioRow.compromiso_marketing ?? null
+                                        empty.compromiso_cautivo = usuarioRow.compromiso_cautivo ?? null
+                                        empty.compromiso_impacto = usuarioRow.compromiso_impacto ?? null
+                                      }
+
+                                      // default tipo to empty string
+                                      empty.tipo = ''
+
+                                      setMilitanteData(empty)
+                                      setMilitanteModalOpen(true)
+                                    }
                                   } catch (e) {
                                     console.error('Error fetching militante summary from table:', e)
-                                    setMilitanteSummary(null)
-                                    setSummaryModalOpen(true)
+                                    setMilitanteData(null)
+                                    setMilitanteModalOpen(true)
                                   }
                                 }}
-                                title="Ver datos de militante"
+                                title="Ver/Editar datos de militante"
                               >
                                 <Edit3 className="w-4 h-4" />
                               </Button>
@@ -483,6 +550,94 @@ export function PersonasTable() {
             )}
             <div className="flex justify-end mt-2">
               <Button onClick={() => setSummaryModalOpen(false)}>Cerrar</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Full Militante modal (editable) */}
+      <Dialog open={militanteModalOpen} onOpenChange={setMilitanteModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <div className="flex flex-col">
+            <DialogTitle className="text-center text-3xl text-teal-700">Información Militante <span className="ml-2">👤➕</span></DialogTitle>
+
+            <div className="p-6">
+              {!militanteData ? (
+                <div className="text-sm text-muted-foreground">Este usuario no tiene registro de militancia.</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <div className="mb-2 text-xs text-muted-foreground">Nombre</div>
+                    <Input value={`${militanteData.nombres || ''} ${militanteData.apellidos || ''}`.trim()} readOnly />
+
+                    <div className="mt-4 mb-2 text-xs text-muted-foreground">Número documento</div>
+                    <Input value={militanteData.numero_documento || ''} readOnly />
+
+                    <div className="mt-4 mb-2 text-xs text-muted-foreground">Coordinador</div>
+                    <Input value={militanteData.coordinador_nombre || militanteData.coordinador_id || ''} onChange={(e) => setMilitanteData((s:any) => ({ ...s, coordinador_id: e.target.value }))} />
+
+                    <div className="mt-4 mb-2 text-xs text-muted-foreground">Compromiso Marketing</div>
+                    <Input value={militanteData.compromiso_marketing || ''} onChange={(e) => setMilitanteData((s:any) => ({ ...s, compromiso_marketing: e.target.value }))} />
+                  </div>
+
+                  <div>
+                    <div className="mb-2 text-xs text-muted-foreground">Formulario</div>
+                    <Input value={militanteData.formulario || ''} onChange={(e) => setMilitanteData((s:any) => ({ ...s, formulario: e.target.value }))} />
+
+                    <div className="mt-4 mb-2 text-xs text-muted-foreground">Tipo Militante</div>
+                    <Select value={militanteData.tipo || ''} onValueChange={(val) => setMilitanteData((s:any) => ({ ...s, tipo: val }))}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Seleccione tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sin tipo</SelectItem>
+                        {tiposMilitante.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>{t.codigo ? `${t.codigo} - ${t.descripcion}` : t.descripcion}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="mt-4 mb-2 text-xs text-muted-foreground">Jefe de Debate</div>
+                    <Input value={militanteData.jefe_debate || ''} onChange={(e) => setMilitanteData((s:any) => ({ ...s, jefe_debate: e.target.value }))} />
+
+                    <div className="mt-4 mb-2 text-xs text-muted-foreground">Compromiso Cautivo</div>
+                    <Input value={militanteData.compromiso_cautivo || ''} onChange={(e) => setMilitanteData((s:any) => ({ ...s, compromiso_cautivo: e.target.value }))} />
+
+                    <div className="mt-4 mb-2 text-xs text-muted-foreground">Compromiso Impacto</div>
+                    <Input value={militanteData.compromiso_impacto || ''} onChange={(e) => setMilitanteData((s:any) => ({ ...s, compromiso_impacto: e.target.value }))} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end items-center gap-4 px-6 pb-6">
+              <Button variant="ghost" onClick={() => setMilitanteModalOpen(false)}>CANCELAR ✖</Button>
+              <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+                try {
+                  if (!militanteData || !(militanteData.id || militanteData.militante_id)) {
+                    toast.error('No hay militante para actualizar')
+                    return
+                  }
+                  const id = militanteData.id || militanteData.militante_id
+                  const payload: any = {
+                    tipo: militanteData.tipo,
+                    coordinador_id: militanteData.coordinador_id,
+                    compromiso_cautivo: militanteData.compromiso_cautivo,
+                    compromiso_impacto: militanteData.compromiso_impacto,
+                    compromiso_marketing: militanteData.compromiso_marketing,
+                    formulario: militanteData.formulario,
+                    perfil_id: militanteData.perfil_id,
+                    estado: militanteData.estado,
+                    jefe_debate: militanteData.jefe_debate,
+                  }
+                  await actualizarMilitante(id, payload)
+                  toast.success('Militante actualizado')
+                  setMilitanteModalOpen(false)
+                  cargarPersonas()
+                } catch (e) {
+                  console.error('Error actualizando militante:', e)
+                  toast.error('Error actualizando militante')
+                }
+              }}>ACTUALIZAR</Button>
             </div>
           </div>
         </DialogContent>
