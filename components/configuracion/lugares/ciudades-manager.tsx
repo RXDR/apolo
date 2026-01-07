@@ -59,8 +59,8 @@ export function CiudadesManager({ initialCiudades }: CiudadesManagerProps) {
 
     const handleEdit = (ciudad: Ciudad) => {
         setEditingCiudad(ciudad)
-        setNombre(ciudad.nombre)
-        setCodigo(ciudad.codigo || '')
+        setNombre(ciudad.nombre.toUpperCase())
+        setCodigo(ciudad.codigo?.toUpperCase() || '')
         setActivo(ciudad.activo)
         setIsDialogOpen(true)
     }
@@ -68,8 +68,8 @@ export function CiudadesManager({ initialCiudades }: CiudadesManagerProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         const formData = new FormData()
-        formData.append('nombre', nombre)
-        formData.append('codigo', codigo)
+        formData.append('nombre', nombre.toUpperCase())
+        formData.append('codigo', codigo.toUpperCase())
         formData.append('activo', String(activo))
 
         try {
@@ -132,7 +132,8 @@ export function CiudadesManager({ initialCiudades }: CiudadesManagerProps) {
                                 <Input
                                     id="nombre"
                                     value={nombre}
-                                    onChange={(e) => setNombre(e.target.value)}
+                                    onChange={(e) => setNombre(e.target.value.toUpperCase())}
+                                    style={{ textTransform: 'uppercase' }}
                                     required
                                 />
                             </div>
@@ -141,7 +142,8 @@ export function CiudadesManager({ initialCiudades }: CiudadesManagerProps) {
                                 <Input
                                     id="codigo"
                                     value={codigo}
-                                    onChange={(e) => setCodigo(e.target.value)}
+                                    onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                                    style={{ textTransform: 'uppercase' }}
                                 />
                             </div>
                             <div className="flex items-center space-x-2">
@@ -185,8 +187,8 @@ export function CiudadesManager({ initialCiudades }: CiudadesManagerProps) {
                         ) : (
                             initialCiudades.map((ciudad) => (
                                 <TableRow key={ciudad.id}>
-                                    <TableCell className="font-medium">{ciudad.nombre}</TableCell>
-                                    <TableCell>{ciudad.codigo || '-'}</TableCell>
+                                    <TableCell className="font-medium uppercase">{ciudad.nombre}</TableCell>
+                                    <TableCell className="uppercase">{ciudad.codigo || '-'}</TableCell>
                                     <TableCell>
                                         <span className={`px-2 py-1 rounded-full text-xs ${ciudad.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                             {ciudad.activo ? 'Activo' : 'Inactivo'}

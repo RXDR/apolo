@@ -54,14 +54,14 @@ export function GrupoEtnicoManager({ initialGrupos }: GrupoEtnicoManagerProps) {
 
     const handleEdit = (grupo: GrupoEtnico) => {
         setEditingGrupo(grupo)
-        setNombre(grupo.nombre || '')
+        setNombre(grupo.nombre?.toUpperCase() || '')
         setIsDialogOpen(true)
     }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         const formData = new FormData()
-        formData.append('nombre', nombre)
+        formData.append('nombre', nombre.toUpperCase())
 
         try {
             if (editingGrupo) {
@@ -119,7 +119,8 @@ export function GrupoEtnicoManager({ initialGrupos }: GrupoEtnicoManagerProps) {
                                 <Input
                                     id="nombre"
                                     value={nombre}
-                                    onChange={(e) => setNombre(e.target.value)}
+                                    onChange={(e) => setNombre(e.target.value.toUpperCase())}
+                                    style={{ textTransform: 'uppercase' }}
                                     required
                                 />
                             </div>
@@ -155,7 +156,7 @@ export function GrupoEtnicoManager({ initialGrupos }: GrupoEtnicoManagerProps) {
                         ) : (
                             initialGrupos.map((grupo) => (
                                 <TableRow key={String(grupo.id)}>
-                                    <TableCell className="font-medium">{grupo.nombre || '-'}</TableCell>
+                                    <TableCell className="font-medium uppercase">{grupo.nombre || '-'}</TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-2">
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(grupo)}>

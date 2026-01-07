@@ -91,7 +91,7 @@ export function ReferenciasCompromisosManager({ initialReferencias, initialCompr
 
     const handleEditRef = (r: Referencia) => {
         setEditingRef(r)
-        setRefNombre(r.nombre || '')
+        setRefNombre(r.nombre?.toUpperCase() || '')
         setRefTelefono(r.telefono || '')
         setRefCiudad(typeof r.ciudad === 'string' ? r.ciudad : (r.ciudad?.id || ''))
         setIsDialogRefOpen(true)
@@ -99,14 +99,14 @@ export function ReferenciasCompromisosManager({ initialReferencias, initialCompr
 
     const handleEditComp = (c: Compromiso) => {
         setEditingComp(c)
-        setCompNombre(c.nombre || '')
+        setCompNombre(c.nombre?.toUpperCase() || '')
         setIsDialogCompOpen(true)
     }
 
     const handleSubmitRef = async (e: React.FormEvent) => {
         e.preventDefault()
         const formData = new FormData()
-        formData.append('nombre', refNombre)
+        formData.append('nombre', refNombre.toUpperCase())
         formData.append('telefono', refTelefono)
         formData.append('ciudad', refCiudad)
 
@@ -132,7 +132,7 @@ export function ReferenciasCompromisosManager({ initialReferencias, initialCompr
     const handleSubmitComp = async (e: React.FormEvent) => {
         e.preventDefault()
         const formData = new FormData()
-        formData.append('nombre', compNombre)
+        formData.append('nombre', compNombre.toUpperCase())
 
         try {
             if (editingComp) {
@@ -201,7 +201,13 @@ export function ReferenciasCompromisosManager({ initialReferencias, initialCompr
                             <form onSubmit={handleSubmitRef} className="space-y-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="nombre">Nombre</Label>
-                                    <Input id="nombre" value={refNombre} onChange={(e) => setRefNombre(e.target.value)} required />
+                                    <Input 
+                                        id="nombre" 
+                                        value={refNombre} 
+                                        onChange={(e) => setRefNombre(e.target.value.toUpperCase())} 
+                                        style={{ textTransform: 'uppercase' }}
+                                        required 
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="telefono">Teléfono</Label>
@@ -253,7 +259,7 @@ export function ReferenciasCompromisosManager({ initialReferencias, initialCompr
                             ) : (
                                 initialReferencias.map(ref => (
                                     <TableRow key={ref.id}>
-                                        <TableCell className="font-medium">{ref.nombre || '-'}</TableCell>
+                                        <TableCell className="font-medium uppercase">{ref.nombre || '-'}</TableCell>
                                         <TableCell>{ref.telefono || '-'}</TableCell>
                                         <TableCell>{ref.ciudad ? (ref as any).ciudad?.nombre || '-' : '-'}</TableCell>
                                         <TableCell className="text-right">
@@ -310,7 +316,13 @@ export function ReferenciasCompromisosManager({ initialReferencias, initialCompr
                             <form onSubmit={handleSubmitComp} className="space-y-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="nombre">Nombre</Label>
-                                    <Input id="nombre" value={compNombre} onChange={(e) => setCompNombre(e.target.value)} required />
+                                    <Input 
+                                        id="nombre" 
+                                        value={compNombre} 
+                                        onChange={(e) => setCompNombre(e.target.value.toUpperCase())} 
+                                        style={{ textTransform: 'uppercase' }}
+                                        required 
+                                    />
                                 </div>
 
                                 <div className="flex justify-end space-x-2">
@@ -338,7 +350,7 @@ export function ReferenciasCompromisosManager({ initialReferencias, initialCompr
                             ) : (
                                 initialCompromisos.map(comp => (
                                     <TableRow key={String(comp.id)}>
-                                        <TableCell className="font-medium">{comp.nombre || '-'}</TableCell>
+                                        <TableCell className="font-medium uppercase">{comp.nombre || '-'}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <Button variant="ghost" size="icon" onClick={() => handleEditComp(comp)}>

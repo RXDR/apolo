@@ -72,9 +72,9 @@ export function BarriosManager({ initialBarrios, ciudades }: BarriosManagerProps
 
     const handleEdit = (barrio: Barrio) => {
         setEditingBarrio(barrio)
-        setNombre(barrio.nombre)
+        setNombre(barrio.nombre.toUpperCase())
         setCiudadId(barrio.ciudad_id)
-        setCodigo(barrio.codigo || '')
+        setCodigo(barrio.codigo?.toUpperCase() || '')
         setActivo(barrio.activo)
         setIsDialogOpen(true)
     }
@@ -82,9 +82,9 @@ export function BarriosManager({ initialBarrios, ciudades }: BarriosManagerProps
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         const formData = new FormData()
-        formData.append('nombre', nombre)
+        formData.append('nombre', nombre.toUpperCase())
         formData.append('ciudad_id', ciudadId)
-        formData.append('codigo', codigo)
+        formData.append('codigo', codigo.toUpperCase())
         formData.append('activo', String(activo))
 
         try {
@@ -175,7 +175,8 @@ export function BarriosManager({ initialBarrios, ciudades }: BarriosManagerProps
                                     <Input
                                         id="nombre"
                                         value={nombre}
-                                        onChange={(e) => setNombre(e.target.value)}
+                                        onChange={(e) => setNombre(e.target.value.toUpperCase())}
+                                        style={{ textTransform: 'uppercase' }}
                                         required
                                     />
                                 </div>
@@ -184,7 +185,8 @@ export function BarriosManager({ initialBarrios, ciudades }: BarriosManagerProps
                                     <Input
                                         id="codigo"
                                         value={codigo}
-                                        onChange={(e) => setCodigo(e.target.value)}
+                                        onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                                        style={{ textTransform: 'uppercase' }}
                                     />
                                 </div>
                                 <div className="flex items-center space-x-2">
@@ -230,9 +232,9 @@ export function BarriosManager({ initialBarrios, ciudades }: BarriosManagerProps
                         ) : (
                             filteredBarrios.map((barrio) => (
                                 <TableRow key={barrio.id}>
-                                    <TableCell className="font-medium">{barrio.nombre}</TableCell>
-                                    <TableCell>{barrio.ciudad?.nombre || '-'}</TableCell>
-                                    <TableCell>{barrio.codigo || '-'}</TableCell>
+                                    <TableCell className="font-medium uppercase">{barrio.nombre}</TableCell>
+                                    <TableCell className="uppercase">{barrio.ciudad?.nombre || '-'}</TableCell>
+                                    <TableCell className="uppercase">{barrio.codigo || '-'}</TableCell>
                                     <TableCell>
                                         <span className={`px-2 py-1 rounded-full text-xs ${barrio.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                             {barrio.activo ? 'Activo' : 'Inactivo'}

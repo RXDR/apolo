@@ -39,7 +39,10 @@ const tipoMilitanteSchema = z.object({
         (val) => parseInt(z.string().parse(val), 10),
         z.number().min(1, "El código debe ser un número positivo")
     ),
-    descripcion: z.string().min(3, "La descripción debe tener al menos 3 caracteres"),
+    descripcion: z.preprocess(
+        (val) => z.string().parse(val).toUpperCase(),
+        z.string().min(3, "La descripción debe tener al menos 3 caracteres")
+    ),
 })
 
 type TipoMilitanteFormValues = z.infer<typeof tipoMilitanteSchema>
@@ -84,7 +87,7 @@ export function TiposMilitanteForm() {
             .from('tipos_militante')
             .insert({
                 codigo: tipoData.codigo,
-                descripcion: tipoData.descripcion
+                descripcion: tipoData.descripcion.toUpperCase()
             })
             .select()
             .single()
@@ -103,7 +106,7 @@ export function TiposMilitanteForm() {
         setEditingTipo(tipo)
         reset({
             codigo: tipo.codigo,
-            descripcion: tipo.descripcion
+            descripcion: tipo.descripcion.toUpperCase()
         })
         setIsDialogOpen(true)
     }
@@ -144,7 +147,7 @@ export function TiposMilitanteForm() {
                     .from('tipos_militante')
                     .update({
                         codigo: data.codigo,
-                        descripcion: data.descripcion
+                        descripcion: data.descripcion.toUpperCase()
                     })
                     .eq('id', editingTipo.id)
                 
@@ -196,7 +199,12 @@ export function TiposMilitanteForm() {
                                 <Label htmlFor="descripcion">Descripción</Label>
                                 <Input
                                     id="descripcion"
-                                    {...register("descripcion")}
+                                    {...register("descripcion", {
+                                        onChange: (e) => {
+                                            e.target.value = e.target.value.toUpperCase()
+                                        }
+                                    })}
+                                    style={{ textTransform: 'uppercase' }}
                                 />
                                 {errors.descripcion && <p className="text-sm text-destructive">{errors.descripcion.message}</p>}
                             </div>
@@ -250,7 +258,7 @@ export function TiposMilitanteForm() {
                         {tipos.map(tipo => (
                             <TableRow key={tipo.id}>
                                 <TableCell>{tipo.codigo}</TableCell>
-                                <TableCell>{tipo.descripcion}</TableCell>
+                                <TableCell className="uppercase">{tipo.descripcion}</TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-2">
                                         <Button variant="ghost" size="icon" onClick={() => handleEdit(tipo)}>
