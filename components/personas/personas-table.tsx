@@ -47,6 +47,15 @@ const getStatusColor = (status: string) => {
   return colors[status] || colors.inactivo
 }
 
+const getRowColor = (status: string) => {
+  const colors: Record<string, string> = {
+    activo: "border-b border-border hover:bg-muted/50 transition-colors",
+    inactivo: "border-b border-border bg-gray-50 hover:bg-gray-100 transition-colors dark:bg-gray-900/30 dark:hover:bg-gray-800/50",
+    suspendido: "border-b border-border bg-red-50 hover:bg-red-100 transition-colors dark:bg-red-950/30 dark:hover:bg-red-900/50",
+  }
+  return colors[status] || colors.activo
+}
+
 export function PersonasTable() {
   const router = useRouter()
   const { listar, eliminar, loading: personasLoading, cambiarEstado, actualizar, obtenerPorId: obtenerUsuarioPorId } = usePersonas()
@@ -265,7 +274,7 @@ export function PersonasTable() {
                       {personas.map((persona) => (
                         <tr
                           key={persona.id}
-                          className="border-b border-border hover:bg-muted/50 transition-colors"
+                          className={getRowColor(persona.estado)}
                         >
                           <td className="px-6 py-4">
                             {persona.foto_perfil_url ? (
@@ -584,12 +593,12 @@ export function PersonasTable() {
                     <Input value={militanteData.formulario || ''} onChange={(e) => setMilitanteData((s:any) => ({ ...s, formulario: e.target.value }))} />
 
                     <div className="mt-4 mb-2 text-xs text-muted-foreground">Tipo Militante</div>
-                    <Select value={militanteData.tipo || ''} onValueChange={(val) => setMilitanteData((s:any) => ({ ...s, tipo: val }))}>
+                    <Select value={militanteData.tipo || 'sin_tipo'} onValueChange={(val) => setMilitanteData((s:any) => ({ ...s, tipo: val === 'sin_tipo' ? null : val }))}>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Seleccione tipo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sin tipo</SelectItem>
+                        <SelectItem value="sin_tipo">Sin tipo</SelectItem>
                         {tiposMilitante.map((t) => (
                           <SelectItem key={t.id} value={t.id}>{t.codigo ? `${t.codigo} - ${t.descripcion}` : t.descripcion}</SelectItem>
                         ))}
