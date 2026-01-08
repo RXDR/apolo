@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -14,54 +14,21 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useAgenda } from "@/lib/hooks/use-agenda"
+import { toast } from "sonner"
 
 interface AgendaEvent {
   id: string
-  title: string
-  date: string
-  startTime: string
-  endTime?: string
+  titulo: string
+  fecha_inicio: string
+  hora_inicio: string
+  fecha_fin?: string
+  hora_fin?: string
   color: "blanco" | "negro" | "gris" | "grisClaro"
+  descripcion?: string
 }
-
-// Datos de ejemplo - en la aplicación real vendrían de la base de datos
-const MOCK_EVENTS: AgendaEvent[] = [
-  {
-    id: "1",
-    title: "Visita Barrial - Centro",
-    date: "2026-01-14",
-    startTime: "09:00",
-    color: "blanco"
-  },
-  {
-    id: "2", 
-    title: "Reunión de Coordinadores",
-    date: "2026-01-14",
-    startTime: "14:00",
-    color: "gris"
-  },
-  {
-    id: "3",
-    title: "Evento de Lanzamiento", 
-    date: "2026-01-15",
-    startTime: "18:00",
-    color: "negro"
-  },
-  {
-    id: "4",
-    title: "Capacitación de Voluntarios",
-    date: "2026-01-16",
-    startTime: "10:00", 
-    color: "blanco"
-  },
-  {
-    id: "5",
-    title: "Reunión con Líderes",
-    date: "2026-01-16",
-    startTime: "15:30",
-    color: "grisClaro"
-  }
-]
 
 const MONTHS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -72,16 +39,16 @@ const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado
 
 const getColorClasses = (color: string) => {
   const colors = {
-    blanco: "bg-gray-100 text-gray-800 border border-gray-300",
-    negro: "bg-gray-800 text-white",
-    gris: "bg-gray-400 text-white",
-    grisClaro: "bg-gray-200 text-gray-700"
+    blanco: "bg-blue-100 text-blue-800 border border-blue-200",
+    negro: "bg-purple-200 text-purple-900 border border-purple-300",
+    gris: "bg-green-100 text-green-800 border border-green-200",
+    grisClaro: "bg-pink-100 text-pink-800 border border-pink-200"
   }
   return colors[color as keyof typeof colors] || colors.blanco
 }
 
 export function AgendaCalendar() {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 6)) // January 6, 2026
+  const [currentDate, setCurrentDate] = useState(new Date())
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [eventTitle, setEventTitle] = useState("")
@@ -90,9 +57,34 @@ export function AgendaCalendar() {
   const [endDate, setEndDate] = useState("")
   const [endTime, setEndTime] = useState("")
   const [selectedColor, setSelectedColor] = useState<"blanco" | "negro" | "gris" | "grisClaro">("blanco")
+  const [eventos, setEventos] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
+
+  // Función para cargar eventos del mes
+  const loadMonthEvents = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const { getAgendaEventosPorMes } = await import('@/lib/actions/agenda')
+      const data = await getAgendaEventosPorMes(year, month)
+      setEventos(data || [])
+      console.log('Eventos cargados:', data)
+    } catch (err) {
+      console.error('Error cargando eventos:', err)
+      setError('Error cargando eventos del mes')
+    } finally {
+      setLoading(false)
+    }
+  }, [year, month])
+
+  // Cargar eventos del mes actual cuando cambie la fecha
+  useEffect(() => {
+    loadMonthEvents()
+  }, [loadMonthEvents])
 
   const firstDayOfMonth = new Date(year, month, 1)
   const lastDayOfMonth = new Date(year, month + 1, 0)
@@ -118,7 +110,7 @@ export function AgendaCalendar() {
 
   const getEventsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0]
-    return MOCK_EVENTS.filter(event => event.date === dateStr)
+    return eventos.filter((evento: any) => evento.fecha_inicio === dateStr)
   }
 
   const handlePrevMonth = () => {
@@ -147,11 +139,12 @@ export function AgendaCalendar() {
       formData.append('hora_fin', endTime)
       formData.append('color', selectedColor)
 
-      // Importar dinámicamente para evitar problemas de carga
+      // Crear el evento directamente
       const { createAgendaEvento } = await import('@/lib/actions/agenda')
       await createAgendaEvento(formData)
       
       console.log("✅ Evento guardado exitosamente")
+      toast.success("Evento guardado exitosamente")
       
       // Limpiar formulario
       setEventTitle("")
@@ -162,12 +155,12 @@ export function AgendaCalendar() {
       setSelectedColor("blanco")
       setIsDialogOpen(false)
       
-      // Aquí podrías recargar los eventos del calendario
-      // await reloadEvents()
+      // Recargar eventos del mes actual
+      await loadMonthEvents()
       
     } catch (error) {
       console.error("❌ Error guardando evento:", error)
-      alert("Error al guardar el evento: " + (error instanceof Error ? error.message : "Error desconocido"))
+      toast.error("Error al guardar el evento: " + (error instanceof Error ? error.message : "Error desconocido"))
     }
   }
 
@@ -184,6 +177,21 @@ export function AgendaCalendar() {
   return (
     <Card className="w-full">
       <CardContent className="p-6">
+        {/* Indicador de carga */}
+        {loading && (
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin mr-2" />
+            <span>Cargando eventos...</span>
+          </div>
+        )}
+        
+        {/* Mensaje de error */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
         {/* Header del calendario */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-700">
@@ -282,13 +290,13 @@ export function AgendaCalendar() {
                 </div>
                 
                 <div className="space-y-1">
-                  {dayEvents.map((event) => (
+                  {dayEvents.map((evento: any) => (
                     <div
-                      key={event.id}
-                      className={`text-xs p-1 rounded text-white cursor-pointer ${getColorClasses(event.color)}`}
-                      title={`${event.title} - ${event.startTime}`}
+                      key={evento.id}
+                      className={`text-xs p-1 rounded cursor-pointer ${getColorClasses(evento.color)}`}
+                      title={`${evento.titulo} - ${evento.hora_inicio}`}
                     >
-                      {event.title.length > 15 ? `${event.title.substring(0, 15)}...` : event.title}
+                      {evento.titulo.length > 15 ? `${evento.titulo.substring(0, 15)}...` : evento.titulo}
                     </div>
                   ))}
                 </div>
@@ -371,13 +379,15 @@ export function AgendaCalendar() {
                       key={color}
                       type="button"
                       onClick={() => setSelectedColor(color as any)}
-                      className={`w-6 h-6 rounded-full border-2 ${
-                        selectedColor === color ? "border-gray-900" : "border-gray-300"
-                      } ${getColorClasses(color)}`}
-                    />
+                      className={`w-8 h-8 rounded-full border-2 ${
+                        selectedColor === color ? "border-gray-900 ring-2 ring-gray-300" : "border-gray-300"
+                      } ${getColorClasses(color)} flex items-center justify-center text-xs`}
+                    >
+                      {selectedColor === color && "✓"}
+                    </button>
                   ))}
                   <span className="ml-2 text-sm text-gray-600 flex items-center gap-1">
-                    Blanco ● Negro ● Gris ● Gris Claro ●
+                    Azul Pastel ● Púrpura Pastel ● Verde Pastel ● Rosa Pastel
                   </span>
                 </div>
               </div>
