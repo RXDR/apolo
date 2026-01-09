@@ -14,7 +14,17 @@ export function createClient(): SupabaseClient<Database> {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+    // Durante el build, usar valores por defecto si las variables no están disponibles
     if (!supabaseUrl || !supabaseAnonKey) {
+        if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
+            // Durante el build en producción, usar valores temporales
+            console.warn('Supabase environment variables not found during build. Using temporary values.')
+            supabaseInstance = createBrowserClient(
+                'https://placeholder.supabase.co',
+                'placeholder-key'
+            )
+            return supabaseInstance
+        }
         throw new Error(
             'Missing Supabase environment variables. Please check your .env.local file.'
         )
