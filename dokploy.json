@@ -2,19 +2,22 @@
   "name": "apolo-crm",
   "version": "1.0.0",
   "type": "dockerfile",
-  "port": 8080,
+  "port": 3000,
   "healthcheck": {
     "enabled": true,
-    "path": "/health",
+    "path": "/api/health",
     "interval": 30,
     "timeout": 10,
     "retries": 3
   },
   "environment": {
-    "PORT": "8080",
-    "NODE_ENV": "production"
+    "PORT": "3000",
+    "NODE_ENV": "production",
+    "NEXT_TELEMETRY_DISABLED": "1"
   },
   "domains": [],
-  "buildArgs": {},
+  "buildArgs": {
+    "CACHE_BUST": "${BUILD_ID}"
+  },
   "restart": "unless-stopped"
 }

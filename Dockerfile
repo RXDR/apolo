@@ -1,57 +1,70 @@
 # =========================
-# Stage 1: Dependencies
+# Multi-stage build optimizado para Dokploy
 # =========================
-FROM node:20-slim AS deps
+
+# Stage 1: Dependencies
+FROM node:20-alpine AS deps
 WORKDIR /app
 
+# Install pnpm
 RUN npm install -g pnpm
 
+# Copy package files
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile
 
+# Install dependencies
+RUN pnpm install --frozen-lockfile --production=false
 
 # =========================
 # Stage 2: Build
 # =========================
-FROM node:20-slim AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Install pnpm
 RUN npm install -g pnpm
 
+# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source code
 COPY . .
 
+# Set environment for build
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build the application
 RUN pnpm run build
 
-
 # =========================
-# Stage 3: Production
+# Stage 3: Production Runtime
 # =========================
-FROM node:20-slim AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 
+# Set production environment
 ENV NODE_ENV=production
-ENV PORT=8080
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
 
-# Create non-root user
+# Create nextjs user for security
 RUN addgroup --system --gid 1001 nodejs \
- && adduser --system --uid 1001 nextjs
+    && adduser --system --uid 1001 nextjs
 
-# Copy standalone output
+# Copy the Next.js standalone build
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy start script
-COPY --chown=nextjs:nodejs start.sh ./start.sh
-RUN chmod +x start.sh
-
+# Switch to non-root user
 USER nextjs
 
-EXPOSE 8080
+# Expose port
+EXPOSE 3000
 
-# Healthcheck (endpoint REAL)
+# Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD node -e "require('http').get('http://localhost:3000/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-CMD ["./start.sh"]
+# Start the application
+CMD ["node", "server.js"]
