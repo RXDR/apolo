@@ -404,7 +404,7 @@ export function AgendaCalendar() {
                   variant="outline"
                   className="flex-1"
                 >
-                  ❌ CERRAR
+                  ❌CERRAR
                 </Button>
               </div>
             </div>
