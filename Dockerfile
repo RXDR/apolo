@@ -19,6 +19,12 @@ RUN npm install -g pnpm
 
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
+
+# Add cache busting argument
+ARG CACHE_BUST=1
+RUN echo "Cache bust: $CACHE_BUST"
+
+# Copy all source code
 COPY . .
 
 # Build the Next.js application
