@@ -196,7 +196,7 @@ export function TiposMilitanteForm() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="descripcion">Descripción</Label>
+                                <Label htmlFor="descripcion"> Descripción</Label>
                                 <Input
                                     id="descripcion"
                                     {...register("descripcion", {
