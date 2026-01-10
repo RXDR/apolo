@@ -13,7 +13,11 @@ export function EnvironmentDebug() {
       keyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length,
       nodeEnv: process.env.NODE_ENV,
       isClient: typeof window !== 'undefined',
-      allPublicEnvs: Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_'))
+      allPublicEnvs: Object.keys(process.env).filter(key => key.startsWith('NEXT_PUBLIC_')),
+      // Raw values for debugging
+      rawUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      rawKeyStart: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20) + '...',
+      timestamp: new Date().toISOString()
     }
     
     console.log('🔍 Environment Debug:', debugInfo)
