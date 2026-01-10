@@ -26,4 +26,4 @@ if [ ! -f "server.js" ]; then
 fi
 
 echo "✅ server.js encontrado, iniciando..."
-node server.js
+node server.js --hostname 0.0.0.0 --port 3000
