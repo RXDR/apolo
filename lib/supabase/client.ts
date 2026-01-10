@@ -5,60 +5,71 @@ import type { Database } from './database.types'
 // Instancia singleton del cliente de Supabase
 let supabaseInstance: SupabaseClient<Database> | null = null
 
+// Variables de entorno con valores por defecto para evitar errores
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+
 export function createClient(): SupabaseClient<Database> {
     // Si ya existe una instancia, retornarla (patrón singleton)
     if (supabaseInstance) {
         return supabaseInstance
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
     console.log('🔍 Creando cliente Supabase:', {
-        hasUrl: !!supabaseUrl,
-        hasKey: !!supabaseAnonKey,
-        url: supabaseUrl?.substring(0, 30) + '...',
+        hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        urlValue: SUPABASE_URL?.substring(0, 50) + '...',
+        keyLength: SUPABASE_ANON_KEY?.length,
         env: process.env.NODE_ENV,
-        isServer: typeof window === 'undefined'
+        isServer: typeof window === 'undefined',
+        isPlaceholder: SUPABASE_URL === 'https://placeholder.supabase.co'
     })
 
-    // Durante el build, usar valores por defecto si las variables no están disponibles
-    if (!supabaseUrl || !supabaseAnonKey) {
-        if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
-            // Durante el build en producción, usar valores temporales
-            console.warn('Supabase environment variables not found during build. Using temporary values.')
+    // Durante el build O cuando las variables no están disponibles, usar placeholders
+    if (SUPABASE_URL === 'https://placeholder.supabase.co' || SUPABASE_ANON_KEY === 'placeholder-key') {
+        if (typeof window === 'undefined') {
+            // En el servidor/build, usar placeholders sin error
+            console.warn('🚧 Using placeholder Supabase credentials during build/server')
             supabaseInstance = createBrowserClient(
                 'https://placeholder.supabase.co',
-                'placeholder-key'
+                'placeholder-key',
+                {
+                    auth: { persistSession: false, autoRefreshToken: false }
+                }
+            )
+            return supabaseInstance
+        } else {
+            // En el cliente, si las variables son placeholder, mostrar error informativo pero no fallar
+            console.error('❌ Supabase environment variables not properly configured in client')
+            
+            // Crear cliente con placeholders que no falle completamente
+            supabaseInstance = createBrowserClient(
+                'https://placeholder.supabase.co',
+                'placeholder-key',
+                {
+                    auth: { persistSession: false, autoRefreshToken: false }
+                }
             )
             return supabaseInstance
         }
-        
-        // En el cliente, mostrar error específico
-        const error = new Error(
-            `Missing Supabase environment variables. URL: ${!!supabaseUrl}, Key: ${!!supabaseAnonKey}`
-        )
-        console.error('❌ Supabase configuration error:', error)
-        throw error
     }
 
-    // Crear la instancia una sola vez
+    // Variables válidas - crear cliente normal
+    console.log('✅ Creating Supabase client with valid credentials')
     supabaseInstance = createBrowserClient<Database>(
-        supabaseUrl,
-        supabaseAnonKey,
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
         {
             auth: {
-                // CRÍTICO: Desactivar revalidación automática para evitar recargas
                 autoRefreshToken: true,
                 persistSession: true,
                 detectSessionInUrl: true,
                 flowType: 'pkce',
-                // Esta es la clave para evitar recargas al cambiar de pestaña
                 storage: typeof window !== 'undefined' ? window.localStorage : undefined,
             },
             global: {
                 headers: {
-                    'x-application-name': 'datanalisis-app',
+                    'x-application-name': 'apolo-app',
                 },
             },
         }

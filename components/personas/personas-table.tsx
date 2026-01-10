@@ -392,17 +392,33 @@ export function PersonasTable() {
                                 className="w-8 h-8 text-yellow-500 hover:bg-yellow-100 dark:hover:bg-yellow-900"
                                 onClick={async () => {
                                   try {
+                                    console.log('🔍 Clicking Edit3 button for persona:', persona.id)
+                                    
                                     // Fetch militante record by usuario_id using existing API
                                     const res = await fetch(`/api/militante/summary/${persona.id}`)
                                     let d: any = null
-                                    if (res.ok) d = await res.json()
+                                    if (res.ok) {
+                                      d = await res.json()
+                                      console.log('✅ Militante summary fetched:', d)
+                                    } else {
+                                      console.warn('⚠️ No militante summary found or API error')
+                                    }
 
                                     // Try to fetch usuario row to preload compromiso fields (usuarios wins over militantes)
                                     let usuarioRow: any = null
                                     try {
-                                      usuarioRow = await obtenerUsuarioPorId(persona.id)
+                                      console.log('🔍 Fetching usuario for preload compromisos...')
+                                      // Use direct API call instead of hook to avoid Supabase client issues
+                                      const usuarioRes = await fetch(`/api/personas/${persona.id}`)
+                                      if (usuarioRes.ok) {
+                                        usuarioRow = await usuarioRes.json()
+                                        console.log('✅ Usuario fetched via API:', usuarioRow)
+                                      } else {
+                                        console.warn('⚠️ Usuario API call failed:', usuarioRes.status)
+                                      }
                                     } catch (ue) {
-                                      console.debug('No se pudo obtener usuario para precargar compromisos:', ue)
+                                      console.error('❌ Error fetching usuario for preload compromisos:', ue)
+                                      // Continue without usuario data - don't break the flow
                                     }
 
                                     if (d) {
@@ -428,6 +444,7 @@ export function PersonasTable() {
                                         }
                                       }
 
+                                      console.log('✅ Setting militante data:', merged)
                                       setMilitanteData(merged)
                                       setMilitanteModalOpen(true)
                                     } else {
@@ -442,13 +459,23 @@ export function PersonasTable() {
                                       // default tipo to empty string
                                       empty.tipo = ''
 
+                                      console.log('✅ Setting empty militante data:', empty)
                                       setMilitanteData(empty)
                                       setMilitanteModalOpen(true)
                                     }
                                   } catch (e) {
-                                    console.error('Error fetching militante summary from table:', e)
-                                    setMilitanteData(null)
+                                    console.error('❌ Error fetching militante summary from table:', e)
+                                    // Show error but still try to open modal with minimal data
+                                    const fallbackData: any = { 
+                                      usuario_id: persona.id, 
+                                      tipo: '',
+                                      error: 'Error cargando datos del militante'
+                                    }
+                                    setMilitanteData(fallbackData)
                                     setMilitanteModalOpen(true)
+                                    
+                                    // Show toast error
+                                    toast.error('Error cargando datos del militante')
                                   }
                                 }}
                                 title="Ver/Editar datos de militante"

@@ -98,16 +98,28 @@ export function usePersonas() {
             setLoading(true)
             setError(null)
 
+            console.log('🔍 usePersonas.obtenerPorId - fetching user ID:', id)
+            
+            // Verificar que Supabase esté inicializado correctamente
+            if (!supabase || !supabase.from) {
+                throw new Error('Supabase client not properly initialized')
+            }
+
             const { data, error: queryError } = await supabase
                 .from('usuarios')
                 .select('*')
                 .eq('id', id)
                 .single()
 
-            if (queryError) throw queryError
+            if (queryError) {
+                console.error('❌ Supabase query error:', queryError)
+                throw queryError
+            }
 
+            console.log('✅ Usuario fetched successfully:', data)
             return data
         } catch (err) {
+            console.error('❌ Error in obtenerPorId:', err)
             const error = normalizeError(err)
             setError(error)
             throw error

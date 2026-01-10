@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Analytics } from "@vercel/analytics/next"
 import { SafeAuthProvider } from "@/lib/contexts/safe-auth-context"
+import { EnvironmentDebug } from "@/components/debug/environment-debug"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function RootLayout({
         <SafeAuthProvider>
           {children}
           <Analytics />
+          <EnvironmentDebug />
         </SafeAuthProvider>
       </body>
     </html>
