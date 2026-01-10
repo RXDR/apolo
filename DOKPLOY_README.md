@@ -1,52 +1,61 @@
-# 🚀 Despliegue APOLO CRM en Dokploy
+# 🚀 Deployment en Dokploy - APOLO CRM
 
-## Configuración para Dokploy
+## ⚠️ PROBLEMA IDENTIFICADO: Variables de Entorno Faltantes
 
-### Paso 1: Configurar el proyecto en Dokploy
-1. En el panel de Dokploy, crear un nuevo proyecto
-2. Usar el tipo: **Dockerfile**
-3. Puerto: **8080**
+El error en el build es: **"Missing Supabase environment variables"**
 
-### Paso 2: Variables de entorno requeridas
+## 🔧 SOLUCIÓN PASO A PASO:
+
+### 1. Configurar Variables en Dokploy:
+En tu panel de Dokploy, ve a **Environment Variables** y agrega:
+
 ```bash
-PORT=8080
+NEXT_PUBLIC_SUPABASE_URL=http://apolo-supabase-5789c7-72-61-64-225.traefik.me
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjQxODY5MzksImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.wlVt8TqPbwpxniBHoOzVtFVPIJ0yPlkyyg1Iz7Xq0l8
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjQxODY5MzksImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlzcyI6InN1cGFiYXNlIn0.gmq1I4uMK3Okk5jJVFCRM6Y_XEgT41sURS7H8KZbtQE
 NODE_ENV=production
-HOSTNAME=0.0.0.0
-
-# Variables de Supabase (configura con tus valores)
-NEXT_PUBLIC_SUPABASE_URL=tu_url_de_supabase
-NEXT_PUBLIC_SUPABASE_ANON_KEY=tu_clave_anonima
-SUPABASE_SERVICE_ROLE_KEY=tu_clave_de_servicio
+PORT=3000
+NEXT_TELEMETRY_DISABLED=1
 ```
 
-### Paso 3: Health Check
-- **Endpoint**: `/health`
-- **Puerto**: `8080` 
-- **Intervalo**: `30s`
-- **Timeout**: `10s`
-- **Reintentos**: `3`
-
-### Paso 4: Construir y desplegar
+### 2. Configurar Build Arguments (si está disponible):
 ```bash
-# El Dockerfile ya está optimizado para puerto 8080
-# Dokploy automáticamente:
-# 1. Construirá la imagen usando el Dockerfile
-# 2. Expondrá el puerto 8080
-# 3. Configurará el health check en /health
-# 4. Reiniciará automáticamente si falla
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
 ```
 
-## ✅ Solución al problema de performance
+### 3. Configuración del Proyecto en Dokploy:
+- **Tipo**: Dockerfile
+- **Puerto**: 3000 (cambiado de 8080)
+- **Health Check**: `/api/health`
 
-Este setup resuelve el problema de los health checks fallidos que estaban causando lentitud en el servidor Docker porque:
+### 4. Hacer Commit y Push:
+```bash
+git add .
+git commit -m "Fix: Configure environment variables for production build"
+git push origin main
+```
 
-1. **Puerto correcto**: La aplicación ahora corre en puerto 8080 (que Dokploy espera)
-2. **Health check funcional**: El endpoint `/health` responde correctamente
-3. **Headers optimizados**: Sin cache para health checks
-4. **Información detallada**: El health check incluye métricas útiles
-5. **Múltiples métodos HTTP**: Soporta GET, POST, PUT, HEAD
+## 🛠️ Cambios Realizados:
 
-## 🔍 Verificación
+✅ **Dockerfile actualizado** - Ahora acepta variables de entorno como build args
+✅ **Puerto cambiado a 3000** - Estándar de Next.js
+✅ **Cliente Supabase mejorado** - Maneja variables faltantes durante build
+✅ **next.config.mjs optimizado** - Configuración para variables de entorno
+✅ **dokploy.json actualizado** - Configuración correcta para puerto 3000
+
+## 🎯 Próximos Pasos:
+
+1. **Configura las variables de entorno** en Dokploy como se muestra arriba
+2. **Haz push de los cambios** (ya están listos)
+3. **Redespliega** la aplicación en Dokploy
+4. **Verifica** el health check en: `https://tu-dominio.com/api/health`
+
+## ⚡ Health Check:
+- **Endpoint**: `/api/health`
+- **Puerto**: 3000
+- **Respuesta esperada**: `{"status": "ok", "timestamp": "..."}`
 
 Una vez desplegado, puedes verificar:
 
