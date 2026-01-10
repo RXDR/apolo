@@ -14,6 +14,14 @@ export function createClient(): SupabaseClient<Database> {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+    console.log('🔍 Creando cliente Supabase:', {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseAnonKey,
+        url: supabaseUrl?.substring(0, 30) + '...',
+        env: process.env.NODE_ENV,
+        isServer: typeof window === 'undefined'
+    })
+
     // Durante el build, usar valores por defecto si las variables no están disponibles
     if (!supabaseUrl || !supabaseAnonKey) {
         if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
@@ -25,9 +33,13 @@ export function createClient(): SupabaseClient<Database> {
             )
             return supabaseInstance
         }
-        throw new Error(
-            'Missing Supabase environment variables. Please check your .env.local file.'
+        
+        // En el cliente, mostrar error específico
+        const error = new Error(
+            `Missing Supabase environment variables. URL: ${!!supabaseUrl}, Key: ${!!supabaseAnonKey}`
         )
+        console.error('❌ Supabase configuration error:', error)
+        throw error
     }
 
     // Crear la instancia una sola vez

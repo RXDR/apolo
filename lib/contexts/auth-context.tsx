@@ -22,30 +22,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // Verificar sesión actual
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null)
-            if (session?.user) {
-                cargarUsuario(session.user.id)
-            } else {
+        try {
+            // Verificar sesión actual
+            supabase.auth.getSession().then(({ data: { session }, error }) => {
+                if (error) {
+                    console.error('❌ Error obteniendo sesión:', error)
+                    setLoading(false)
+                    return
+                }
+                
+                setUser(session?.user ?? null)
+                if (session?.user) {
+                    cargarUsuario(session.user.id)
+                } else {
+                    setLoading(false)
+                }
+            }).catch(error => {
+                console.error('❌ Error en getSession:', error)
                 setLoading(false)
-            }
-        })
+            })
 
-        // Escuchar cambios de autenticación
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null)
-            if (session?.user) {
-                cargarUsuario(session.user.id)
-            } else {
-                setUsuario(null)
-                setLoading(false)
-            }
-        })
+            // Escuchar cambios de autenticación
+            const {
+                data: { subscription },
+            } = supabase.auth.onAuthStateChange((_event, session) => {
+                setUser(session?.user ?? null)
+                if (session?.user) {
+                    cargarUsuario(session.user.id)
+                } else {
+                    setUsuario(null)
+                    setLoading(false)
+                }
+            })
 
-        return () => subscription.unsubscribe()
+            return () => subscription.unsubscribe()
+        } catch (error) {
+            console.error('❌ Error inicializando AuthProvider:', error)
+            setLoading(false)
+        }
     }, [])
 
     async function cargarUsuario(authUserId: string) {
