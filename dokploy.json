@@ -2,7 +2,7 @@
   "name": "apolo-crm",
   "version": "1.0.0",
   "type": "dockerfile",
-  "port": 8080,
+  "port": 3000,
   "healthcheck": {
     "enabled": true,
     "path": "/health",
@@ -11,7 +11,7 @@
     "retries": 3
   },
   "environment": {
-    "PORT": "8080",
+    "PORT": "3000",
     "NODE_ENV": "production"
   },
   "domains": [],

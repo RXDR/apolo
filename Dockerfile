@@ -43,8 +43,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Switch to the non-root user
 USER nextjs
 
-EXPOSE 8080
-ENV PORT=8080
+EXPOSE 3000
+ENV PORT=3000
 ENV NODE_ENV=production
 
 # Copiar script de inicio
@@ -52,6 +52,6 @@ COPY --chown=nextjs:nodejs start.sh ./
 RUN chmod +x start.sh
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+  CMD curl -f http://localhost:3000/health || exit 1
 
 CMD ["./start.sh"]
