@@ -50,6 +50,9 @@ RUN pnpm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# Instalar curl para health checks
+RUN apk add --no-cache curl
+
 # Set production environment
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -64,6 +67,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Debug: Verificar que los archivos estén copiados correctamente
+USER root
+RUN echo "📁 Contenido del directorio de trabajo:" && ls -la
+RUN echo "📁 Verificando server.js:" && ls -la server.js || echo "❌ server.js no encontrado"
+RUN echo "📁 Verificando .next:" && ls -la .next/ || echo "❌ .next no encontrado"
+
 # Switch to non-root user
 USER nextjs
 
@@ -72,7 +81,7 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD curl -f http://localhost:3000/api/health || exit 1
 
 # Start the application
 CMD ["node", "server.js"]
