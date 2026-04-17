@@ -43,6 +43,7 @@ export function createAdminClient() {
 
     const supabaseServiceRoleKey =
         process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.SERVICE_ROLE_KEY ||
         process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY
 
     // Logging para debug (solo en desarrollo)

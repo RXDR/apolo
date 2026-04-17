@@ -27,26 +27,31 @@ import { CompromisosSection } from "./form-sections/compromisos"
 // Esquema de validación completo
 const personaSchema = z.object({
   // Datos Personales
+  fecha_registro: z.string().optional(),
   nombres: z.string().optional(),
   apellidos: z.string().optional(),
   tipo_documento: z.string().optional(),
   numero_documento: z.string().optional(),
   fecha_nacimiento: z.string().optional(),
   genero: z.string().optional(),
-  estado_civil: z.string().optional(),
+  poblacion: z.string().optional(),
+  verificacion_sticker: z.string().optional(),
+  fecha_verificacion_sticker: z.string().optional(),
+  observacion_verificacion_sticker: z.string().optional(),
+  nombre_verificador: z.string().optional(),
 
   // Ubicación
+  lugar_nacimiento: z.string().optional(),
   direccion: z.string().optional(),
   ciudad_id: z.string().optional(),
   localidad_id: z.string().optional(),
   barrio_id: z.string().optional(),
-  zona_id: z.string().optional(),
-  puesto_votacion_id: z.string().optional(),
-  mesa_votacion: z.string().optional(),
+  ubicacion: z.string().optional(),
 
   // Contacto
   email: z.string().email("Email inválido").optional().or(z.literal("")),
   celular: z.string().optional(),
+  telefono: z.string().optional(),
   telefono_fijo: z.string().optional(),
   whatsapp: z.string().optional(),
 
@@ -54,8 +59,6 @@ const personaSchema = z.object({
   nivel_escolaridad: z.string().optional(),
   perfil_ocupacion: z.string().optional(),
   tipo_vivienda: z.string().optional(),
-  estrato: z.string().optional(),
-  ingresos_rango: z.string().optional(),
   tiene_hijos: z.boolean().default(false),
   numero_hijos: z.coerce.number().optional(),
 
@@ -63,22 +66,20 @@ const personaSchema = z.object({
   facebook: z.string().optional(),
   instagram: z.string().optional(),
   twitter: z.string().optional(),
-  linkedin: z.string().optional(),
-  tiktok: z.string().optional(),
 
   // Referencias
-  referencia_id: z.string().optional(),
-  tipo_referencia_id: z.string().optional(),
-  lider_responsable: z.string().optional(),
+  referencia_seleccion: z.string().optional(),
+  telefono_referencia: z.string().optional(),
 
   // Compromisos
   compromiso_cautivo: z.coerce.number().min(0).default(0),
   compromiso_impacto: z.coerce.number().min(0).default(0),
   compromiso_marketing: z.coerce.number().min(0).default(0),
-  compromiso_id: z.string().optional(),
+  compromiso_difusion: z.coerce.number().min(0).default(0).or(z.string()),
+  compromiso_proyecto: z.string().optional(),
   observaciones: z.string().optional(),
   // Estado
-  estado: z.enum(['activo', 'inactivo', 'suspendido']).optional(),
+  estado: z.enum(['activo', 'inactivo', 'suspendido', 'Activo']).optional(),
 })
 
 type PersonaFormValues = z.infer<typeof personaSchema>
@@ -116,7 +117,7 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
       compromiso_cautivo: 0,
       compromiso_impacto: 0,
       compromiso_marketing: 0,
-      compromiso_id: "",
+      compromiso_difusion: 0,
       estado: "activo",
     },
   })
@@ -144,11 +145,11 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
         actualizado_por: usuarioActual?.id,
       }
 
-      // Some form fields (compromiso_id, referencia_id) are UI-only and may not exist
-      // in the usuarios table in the DB schema. Remove them from the payload to avoid
-      // Supabase schema/cache errors. The numeric compromiso_* fields are persisted.
-      if (personaData.compromiso_id !== undefined) delete personaData.compromiso_id
-      if (personaData.referencia_id !== undefined) delete personaData.referencia_id
+      // Campos solo frontend se pueden eliminar si no pertenecen a la BD
+      if (personaData.compromiso_difusion !== undefined) delete personaData.compromiso_difusion;
+      if (personaData.compromiso_proyecto !== undefined) delete personaData.compromiso_proyecto;
+      // Nota: compromiso_marketing etc. aún quedan en personaData, tal vez fallan en Supabase si no existen en usuarios,
+      // pero dejaremos que la BD las inserte si existen. Si no, habría q limpiarlas acá.
 
       if (isEditing && initialData?.id) {
         await actualizar(initialData.id, personaData as any)
@@ -163,7 +164,7 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
               await fetch('/api/militante', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: mil.id || mil.militante_id, compromiso_marketing: data.compromiso_marketing, compromiso_cautivo: data.compromiso_cautivo, compromiso_impacto: data.compromiso_impacto }),
+                body: JSON.stringify({ id: mil.id || mil.militante_id, compromiso_marketing: data.compromiso_marketing, compromiso_cautivo: data.compromiso_cautivo, compromiso_impacto: data.compromiso_impacto, compromiso_difusion: data.compromiso_difusion, compromiso_proyecto: data.compromiso_proyecto }),
               })
             }
           }
@@ -186,7 +187,7 @@ export function PersonaForm({ initialData, isEditing = false }: PersonaFormProps
               await fetch('/api/militante', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: mil.id || mil.militante_id, compromiso_marketing: data.compromiso_marketing, compromiso_cautivo: data.compromiso_cautivo, compromiso_impacto: data.compromiso_impacto }),
+                body: JSON.stringify({ id: mil.id || mil.militante_id, compromiso_marketing: data.compromiso_marketing, compromiso_cautivo: data.compromiso_cautivo, compromiso_impacto: data.compromiso_impacto, compromiso_difusion: data.compromiso_difusion, compromiso_proyecto: data.compromiso_proyecto }),
               })
             }
           }
