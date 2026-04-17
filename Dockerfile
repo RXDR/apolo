@@ -88,6 +88,8 @@ USER nextjs
 
 # Expose port
 EXPOSE 3000
+ENV PORT=3000
+ENV NODE_ENV=production
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
